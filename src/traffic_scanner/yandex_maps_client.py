@@ -68,6 +68,9 @@ class YandexMapsClient:
             logger.error(f'Invalid response: {resp.text}')
             raise e
 
+    def search(self, coords):
+        pass
+
     def build_route(self, coords):
         time.sleep(self.REQUESTS_DELAY)
         params = {

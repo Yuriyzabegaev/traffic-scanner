@@ -49,7 +49,7 @@ class TrafficView:
         durations_in_time_intervals = tuple(filter(len, durations_in_time_intervals))
         time_intervals = np.array(time_intervals)[nonzero_idx]
 
-        alpha = 0.4
+        alpha = 0.6
         fig = plt.figure(figsize=(12, 4))
         max_ = tuple(map(np.max, durations_in_time_intervals))
         mean = tuple(map(np.mean, durations_in_time_intervals))
@@ -62,12 +62,14 @@ class TrafficView:
         ax.yaxis.set_major_formatter(md.DateFormatter('%H:%M'))
 
         # Casting to time
-        max_ = tuple(map(self.seconds_to_time, max_))
-        min_ = tuple(map(self.seconds_to_time, min_))
+        # max_ = tuple(map(self.seconds_to_time, max_))
+        # min_ = tuple(map(self.seconds_to_time, min_))
         mean = tuple(map(self.seconds_to_time, mean))
 
-        ax.bar(x_labels, max_, alpha=alpha, label='Min', width=0.005)
-        ax.bar(x_labels, min_, alpha=alpha, label='Max', width=0.015)
-        ax.set_ylim(np.min(min_) - datetime.timedelta(minutes=10), np.max(max_) + datetime.timedelta(minutes=10))
+        # ax.bar(x_labels, max_, alpha=0.8, label='Max', width=0.013, color='orange')
+        # ax.bar(x_labels, min_, alpha=alpha, label='Min', width=0.015, color='blue')
+        ax.bar(x_labels, mean, alpha=0.8, label='Mean', width=0.015, color='green')
+
+        ax.set_ylim(np.min(mean) - datetime.timedelta(minutes=10), np.max(mean) + datetime.timedelta(minutes=10))
         fig.legend()
         return fig

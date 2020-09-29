@@ -8,12 +8,12 @@ import csv
 import logging
 import pandas as pd
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from traffic_scanner.traffic_dispatcher import TrafficDispatcher
 from traffic_scanner.traffic_view import TrafficView
-
 
 plt.style.use('fivethirtyeight')
 
@@ -46,6 +46,10 @@ class BotController:
             figures.append(self.tv.plot_traffic(timestamps, durations))
         return tuple(figures)
 
+    def bad_data(self, update):
+        update.message.reply_text('Could not understand your coordinates. Retry? :(')
+        return self.ENTER_START
+
     # BOT COMMANDS
 
     def add_route(self, start_coords, end_coords):
@@ -74,10 +78,13 @@ class BotController:
             return ConversationHandler.END
         coords = self.coords_regexp.match(update.message.text)
         if coords is None:
-            update.message.reply_text('Could not understand your coordinates. Retry? :(')
-            return self.ENTER_START
-        context.chat_data['start_location'] = coords.group(0)
-        # logger.info("Gender of %s: %s", user.first_name, update.message.text)
+            return self.bad_data(update)
+        try:
+            l1, l0 = coords.group(1), coords.group(3)
+        except IndexError:
+            return self.bad_data(update)
+
+        context.chat_data['start_location'] = f'{l0},{l1}'
         update.message.reply_text('Now enter finish coordinates')
         return self.ENTER_FINISH
 
@@ -87,16 +94,20 @@ class BotController:
             return ConversationHandler.END
         coords = self.coords_regexp.match(update.message.text)
         if coords is None:
-            update.message.reply_text('Could not understand your coordinates. Retry? :(')
-            return self.ENTER_FINISH
-        context.chat_data['finish_location'] = coords.group(0)
-        # logger.info("Gender of %s: %s", user.first_name, update.message.text)
+            return self.bad_data(update)
+        try:
+            l1, l0 = coords.group(1), coords.group(3)
+        except IndexError:
+            return self.bad_data(update)
+        context.chat_data['finish_location'] = f'{l0},{l1}'
         self.add_route(context.chat_data['start_location'], context.chat_data['finish_location'])
         update.message.reply_text('Ok!')
         return ConversationHandler.END
 
     def build_report(self, update, context):
         figures = self.make_traffic_figures()
+        if len(figures) == 0:
+            update.message.reply_text('No routes')
         for fig in figures:
             with io.BytesIO() as buf:
                 fig.savefig(buf, format='png')
@@ -112,7 +123,10 @@ class BotController:
 
 period = 10 * 60
 bc = BotController(period)
-updater = Updater(token='672100742:AAEC7GTgY32rkDB5mBdYmqxPvO2gXLRREs0', use_context=True)
+updater = Updater(token=
+                  # '672100742:AAEC7GTgY32rkDB5mBdYmqxPvO2gXLRREs0',
+                  '853266267:AAGw5iNAOrLVMWLjsHcesEFLpS8QfX1fFqA',  # dev bot
+                  use_context=True)
 dp = updater.dispatcher
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler('start', bc.start)],
@@ -132,7 +146,3 @@ dp.add_handler(CommandHandler('report', bc.build_report))
 dp.add_handler(CommandHandler('list', bc.list_routes))
 
 # figs = bc.make_traffic_figures()
-
-dp.run_async(bc.td.serve)
-updater.start_polling()
-updater.idle()

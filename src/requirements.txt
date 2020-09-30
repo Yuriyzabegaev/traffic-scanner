@@ -1,3 +1,4 @@
+pytz
 numpy
 python-telegram-bot
 matplotlib

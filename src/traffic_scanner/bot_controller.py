@@ -124,8 +124,8 @@ class BotController:
 period = 10 * 60
 bc = BotController(period)
 updater = Updater(token=
-                  # '672100742:AAEC7GTgY32rkDB5mBdYmqxPvO2gXLRREs0',
-                  '853266267:AAGw5iNAOrLVMWLjsHcesEFLpS8QfX1fFqA',  # dev bot
+                  '672100742:AAEC7GTgY32rkDB5mBdYmqxPvO2gXLRREs0',  # prod bot
+                  # '853266267:AAGw5iNAOrLVMWLjsHcesEFLpS8QfX1fFqA',  # dev bot
                   use_context=True)
 dp = updater.dispatcher
 conv_handler = ConversationHandler(

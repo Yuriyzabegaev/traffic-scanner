@@ -1,12 +1,12 @@
-import datetime
-import pytz
-
-from traffic_scanner.bot_controller import dp, bc, updater
+from traffic_scanner.bot_controller import main
 
 
-datetime.datetime.now(tz=pytz.timezone('Europe/Moscow'))
-print(datetime.datetime.now())
+main()
 
-dp.run_async(bc.td.serve)
-updater.start_polling()
-updater.idle()
+
+
+# numpy
+# python-telegram-bot
+# matplotlib
+# requests
+# pandas

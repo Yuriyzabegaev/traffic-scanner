@@ -1,6 +1,6 @@
 pytz
-numpy
 python-telegram-bot
-matplotlib
-requests
 pandas
+matplotlib
+numpy
+requests

@@ -3,11 +3,21 @@ import random
 import string
 import time
 import urllib
+import re
 
 import numpy as np
 import requests as r
 
 logger = logging.getLogger('traffic_scanner/yandex_maps_client.py')
+REQUESTS_DELAY = 0.1
+
+
+def sleep_before_run(func):
+    def closure(*args, **kwargs):
+        time.sleep(REQUESTS_DELAY)
+        return func(*args, **kwargs)
+
+    return closure
 
 
 def make_s(source):
@@ -25,7 +35,6 @@ def make_s(source):
 
 
 class YandexMapsClient:
-    REQUESTS_DELAY = 0.1
     ENDPOINT = 'https://yandex.ru/maps/'
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko)\
@@ -47,32 +56,30 @@ class YandexMapsClient:
         suffix = ''.join(random.choices(string.digits, k=6))
         return '{}_{}'.format(prefix, suffix)
 
-    def update_session(self, forse=False):
-        if forse or time.time() - self.t_session_start > self.session_timeout:
-            time.sleep(self.REQUESTS_DELAY)
+    @sleep_before_run
+    def update_session(self, force=False):
+        if force or time.time() - self.t_session_start > self.session_timeout:
             resp = r.get(self.ENDPOINT, headers=self.HEADERS)
             resp.raise_for_status()
             self.cookies = resp.cookies
             self.renew_csrf_token()
             self.session_id = self.generate_random_session_id()
+            self.session_id = '1605440452714_990932'
             self.t_session_start = time.time()
 
+    @sleep_before_run
     def renew_csrf_token(self):
-        time.sleep(self.REQUESTS_DELAY)
         resp = r.get(self.ENDPOINT + 'api/router/buildRoute/', headers=self.HEADERS, cookies=self.cookies)
-        self.cookies.update(resp.cookies)
         resp.raise_for_status()
+        self.cookies.update(resp.cookies)
         try:
             self.csrf_token = resp.json()['csrfToken']
         except ValueError or IndexError as e:
             logger.error(f'Invalid response: {resp.text}')
             raise e
 
-    def search(self, coords):
-        pass
-
+    @sleep_before_run
     def build_route(self, coords):
-        time.sleep(self.REQUESTS_DELAY)
         params = {
             'activeComparisonMode': 'auto',
             'ajax': 1,
@@ -86,7 +93,8 @@ class YandexMapsClient:
             'sessionId': self.session_id,
             'type': 'auto',
         }
-        params['s'] = make_s(urllib.parse.urlencode(params))
+        params_string = urllib.parse.urlencode(params)
+        params['s'] = make_s(params_string)
         logger.info(f'Building route for coords: {coords}')
         logger.info(f'Sending params: {params}, cookies: {self.cookies}')
         resp = r.get(self.ENDPOINT + 'api/router/buildRoute/', params=params,

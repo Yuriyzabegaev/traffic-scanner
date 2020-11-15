@@ -1,2 +1,3 @@
-routes.csv
-traffic.csv
+venv
+*.csv
+*.tar

@@ -12,6 +12,9 @@ logger = logging.getLogger('traffic_scanner/yandex_maps_client.py')
 REQUESTS_DELAY = 0.1
 
 
+LOCATION_TITLE_REGEX = re.compile(r'<meta property=\"og:title\" content=\"(.*?)\">')
+
+
 def sleep_before_run(func):
     def closure(*args, **kwargs):
         time.sleep(REQUESTS_DELAY)
@@ -79,7 +82,8 @@ class YandexMapsClient:
             raise e
 
     @sleep_before_run
-    def build_route(self, coords):
+    def build_route(self, start_coords, end_coords):
+        coords_str = f'{start_coords[0]},{start_coords[1]}~{end_coords[0]},{end_coords[1]}'
         params = {
             'activeComparisonMode': 'auto',
             'ajax': 1,
@@ -89,14 +93,13 @@ class YandexMapsClient:
             'lang': 'ru',
             'locale': 'ru_RU',
             'mode': 'best',
-            'rll': coords,  # NOTE: They are swapped  '-0.12766,51.507351~-3.679508,52.384911'
+            'rll': coords_str,  # NOTE: They are swapped  '-0.12766,51.507351~-3.679508,52.384911'
             'sessionId': self.session_id,
             'type': 'auto',
         }
         params_string = urllib.parse.urlencode(params)
         params['s'] = make_s(params_string)
-        logger.info(f'Building route for coords: {coords}')
-        logger.info(f'Sending params: {params}, cookies: {self.cookies}')
+        logger.info(f'Building route for coordinates: {coords_str}')
         resp = r.get(self.ENDPOINT + 'api/router/buildRoute/', params=params,
                      headers=self.HEADERS, cookies=self.cookies)
         self.cookies.update(resp.cookies)
@@ -106,3 +109,19 @@ class YandexMapsClient:
         except ValueError as e:
             logger.error(f'Invalid response: {resp.text}')
             raise e
+
+    @sleep_before_run
+    def get_location_title(self, coords):
+        coords_str = f'{coords[1]},{coords[0]}'
+        logger.info(f'Getting title for location at coordinates: {coords_str}')
+        params = {
+            'mode': 'search',
+            'text': coords_str,  # User verbose format
+            'z': '1'
+        }
+        resp = r.get(self.ENDPOINT, params=params, headers=self.HEADERS, cookies=self.cookies)
+        resp.raise_for_status()
+        regex_matches = LOCATION_TITLE_REGEX.search(resp.text)
+        if regex_matches is None:
+            raise ValueError('Unable to match')
+        return regex_matches.group(1)

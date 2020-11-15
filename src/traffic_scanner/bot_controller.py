@@ -96,23 +96,12 @@ class BotController:
 
     '''BOT COMMANDS'''
 
-    def add_route(self, start_coords, end_coords):
-        # TODO: Remove whitespaces
-        route = f'{start_coords}~{end_coords}'
-
-        self.traffic_scanner.storage.add_route(route)
-
     def remove_route(self, route):
         self.traffic_scanner.storage.remove_route(route)
 
     @staticmethod
     def start(update, context):
         update.message.reply_text(BotController.RESPONSE_ON_START)
-
-    @staticmethod
-    def add(update, context):
-        update.message.reply_text(BotController.PROPOSAL_ENTER_START)
-        return BotController.ENTER_START
 
     def enter_start(self, update, context):
         if check_cancel(update):
@@ -142,13 +131,14 @@ class BotController:
             update.message.reply_text(BotController.PROPOSAL_COORDINATES_INSTEAD_OF_URL)
             return BotController.ENTER_FINISH
         context.chat_data['finish_location'] = l0, l1
-        self.add_route(context.chat_data['start_location'], context.chat_data['finish_location'])
+        self.traffic_scanner.add_route(context.chat_data['start_location'], context.chat_data['finish_location'])
         update.message.reply_text(BotController.RESPONSE_ON_SUCCESS)
         return ConversationHandler.END
 
     def build_report(self, update, context):
         reports = map(self.traffic_scanner.storage.make_report, self.traffic_scanner.storage.get_routes())
-        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations) for r in reports]
+        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations) for r in reports
+                   if len(r.timestamps) > 0]
         if len(figures) == 0:
             update.message.reply_text('No routes')
         for fig in figures:
@@ -159,8 +149,8 @@ class BotController:
             update.message.reply_photo(plot_file)
 
     def list_routes(self, update, context):
-        routes_df = self.traffic_scanner.storage.get_routes()
-        update.message.reply_text(str(routes_df))
+        routes = [route.title for route in self.traffic_scanner.storage.get_routes()]
+        update.message.reply_text(str(routes))
 
 
 def error_callback(update, context):
@@ -184,7 +174,9 @@ updater = Updater(token=
                   use_context=True)
 dp = updater.dispatcher
 conv_handler = ConversationHandler(
-    entry_points=[CommandHandler('add', bc.add)],
+    entry_points=[MessageHandler(
+            Filters.text,
+            bc.enter_start)],
     states={
         bc.ENTER_START: [MessageHandler(
             Filters.text,
@@ -197,9 +189,9 @@ conv_handler = ConversationHandler(
 )
 
 dp.add_handler(CommandHandler('start', bc.start))
-dp.add_handler(conv_handler)
 dp.add_handler(CommandHandler('report', bc.build_report))
 dp.add_handler(CommandHandler('list', bc.list_routes))
+dp.add_handler(conv_handler)
 dp.add_error_handler(error_callback)
 
 

@@ -27,7 +27,7 @@ class TrafficView:
         return datetime.datetime(2011, 1, 11, hour, minute, second)
 
     def plot_traffic(self, timestamps, durations):
-        datetimes = tuple(map(datetime.datetime.fromisoformat, timestamps))
+        datetimes = tuple(map(datetime.datetime.fromtimestamp, timestamps))
         time_intervals = []
         durations_in_time_intervals = []
 

@@ -23,7 +23,7 @@ class TrafficView:
     def seconds_to_time(seconds):
         return datetime.datetime.fromtimestamp(seconds)
 
-    def plot_traffic(self, timestamps, durations):
+    def plot_traffic(self, timestamps, durations, timezone):
         datetimes = tuple(map(datetime.datetime.fromtimestamp, timestamps))
         time_intervals = []
         durations_in_time_intervals = []
@@ -51,7 +51,8 @@ class TrafficView:
         max_ = tuple(map(np.max, durations_in_time_intervals))
         mean = tuple(map(np.mean, durations_in_time_intervals))
         min_ = tuple(map(np.min, durations_in_time_intervals))
-        x_labels = tuple(map(lambda x: datetime.datetime(2011, 11, 11, x.hour, x.minute, x.second), time_intervals))
+        x_labels = tuple(map(lambda x: datetime.datetime(2011, 11, 11, x.hour + timezone, x.minute, x.second),
+                             time_intervals))
         ax = fig.gca()
 
         ax.xaxis_date()

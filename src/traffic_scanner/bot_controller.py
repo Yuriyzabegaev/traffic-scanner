@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 import matplotlib
 
-from traffic_scanner.storage import TrafficStorageCSV
+from traffic_scanner.storage import TrafficStorageCSV, User
 from traffic_scanner.yandex_maps_client import YandexMapsClient
 
 matplotlib.use('Agg')
@@ -104,8 +104,8 @@ class BotController:
     def remove_route(self, route):
         self.traffic_scanner.storage.remove_route(route)
 
-    @staticmethod
-    def start(update, context):
+    def start(self, update, context):
+        self.traffic_scanner.storage.update_user(User(user_idx=update.message.from_user.id, timezone=+3))
         update.message.reply_text(BotController.RESPONSE_ON_START)
 
     @cancelable
@@ -142,13 +142,14 @@ class BotController:
         title = update.message.text
         self.traffic_scanner.add_route(context.chat_data['start_location'],
                                        context.chat_data['finish_location'],
-                                       title=title)
+                                       title=title,
+                                       user_idx=update.message.from_user)
         update.message.reply_text(BotController.RESPONSE_ON_SUCCESS)
         return ConversationHandler.END
 
     def build_report(self, update, context):
         reports = map(self.traffic_scanner.storage.make_report, self.traffic_scanner.storage.get_routes())
-        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations) for r in reports
+        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations, r.timezone) for r in reports
                    if len(r.timestamps) > 0]
         if len(figures) == 0:
             update.message.reply_text('No routes')

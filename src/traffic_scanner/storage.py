@@ -24,10 +24,18 @@ class Route:
 
 class RouteTrafficReport:
 
-    def __init__(self, route, timestamps, durations):
+    def __init__(self, route, timestamps, durations, timezone):
         self.route: Route = route
         self.timestamps = timestamps
         self.durations = durations
+        self.timezone = timezone
+
+
+class User:
+
+    def __init__(self, user_idx, timezone):
+        self.timezone = timezone
+        self.user_idx = user_idx
 
 
 class TrafficStorage(ABC):
@@ -52,6 +60,10 @@ class TrafficStorage(ABC):
     def make_report(self, route) -> RouteTrafficReport:
         pass
 
+    @abstractmethod
+    def update_user(self, user: User) -> None:
+        pass
+
 
 def validate_exists(p: Path):
     if not p.exists():
@@ -63,10 +75,12 @@ def validate_exists(p: Path):
 class TrafficStorageCSV(TrafficStorage):
     TRAFFIC_FIELDS = ['route_id', 'timestamp', 'duration_sec']
     ROUTES_FIELDS = ['route_id', 'title', 'start_coords', 'end_coords', 'user_id']
+    USERS_FIELDS = ['user_id', 'time_zone']
 
-    def __init__(self, routes_filename='routes.csv', traffic_filename='traffic.csv'):
+    def __init__(self, routes_filename='routes.csv', traffic_filename='traffic.csv', users_filename='users.csv'):
         self.routes_path = validate_exists(Path(routes_filename))
         self.traffic_path = validate_exists(Path(traffic_filename))
+        self.users_path = validate_exists(Path(users_filename))
         self.free_indices = count(len(pd.read_csv(self.routes_path)))
 
     def get_routes(self):
@@ -109,10 +123,24 @@ class TrafficStorageCSV(TrafficStorage):
 
     def make_report(self, route):
         df = pd.read_csv(self.traffic_path)
+        users_df = pd.read_csv(self.users_path)
 
         route_df = df[df['route_id'] == route.idx]
         timestamps = route_df['timestamp'].tolist()
         durations = route_df['duration_sec'].tolist()
+        timezone = users_df[users_df['user_id'] == 91945569]['time_zone'][0]
         return RouteTrafficReport(route=route,
                                   timestamps=timestamps,
-                                  durations=durations)
+                                  durations=durations,
+                                  timezone=timezone)
+
+    def update_user(self, user):
+        users_df = pd.read_csv(self.users_path)
+        user_in_df = users_df[users_df['user_id'] == user.user_idx]
+        if len(user_in_df) == 0:
+            with self.users_path.open('a') as f:
+                writer = csv.DictWriter(f, TrafficStorageCSV.USERS_FIELDS)
+                writer.writerow(dict(
+                    user_id=user.user_idx,
+                    time_zone=user.timezone
+                ))

@@ -22,11 +22,12 @@ class TrafficScanner:
         # except ValueError:
         #     return f'{coords[1]},{coords[0]}'
 
-    def add_route(self, start_coords, end_coords, title=None):
+    def add_route(self, start_coords, end_coords, user_idx, title=None):
         title = title or f'{start_coords} -> {end_coords}'
         route = Route(start_coords=start_coords,
                       end_coords=end_coords,
-                      title=title)
+                      title=title,
+                      user_idx=user_idx)
         self.storage.add_route(route)
         self.scan_route(route)
 
@@ -44,12 +45,12 @@ class TrafficScanner:
                 duration_sec = routes[0]['durationInTraffic']
             else:
                 logger.error(f'On route {route.idx} 0 available ways were found.')
-                duration_sec = None  # TODO: Handle this
+                return
         except KeyError as e:
             logger.error(f'Invalid json: {traffic_json}')
             raise e
         logger.info(f'Duration: {duration_sec}')
-        self.storage.append_traffic(route, duration_sec)
+        self.storage.append_traffic(route, duration_sec=duration_sec)
 
     def serve(self):
         logger.info('Start serving.')

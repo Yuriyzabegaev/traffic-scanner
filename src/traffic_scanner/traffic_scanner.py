@@ -16,15 +16,14 @@ class TrafficScanner:
         self.yandex_maps_client: YandexMapsClient = yandex_maps_client
 
     def _title_or_coords(self, coords):
-        try:
-            return self.yandex_maps_client.get_location_title(coords)
-        except ValueError:
-            return f'{coords[1]},{coords[0]}'
+        assert False
+        # try:
+        #     return self.yandex_maps_client.get_location_title(coords)
+        # except ValueError:
+        #     return f'{coords[1]},{coords[0]}'
 
-    def add_route(self, start_coords, end_coords):
-        start_title = self._title_or_coords(start_coords)
-        end_title = self._title_or_coords(end_coords)
-        title = f'{start_title} -> {end_title}'
+    def add_route(self, start_coords, end_coords, title=None):
+        title = title or f'{start_coords} -> {end_coords}'
         route = Route(start_coords=start_coords,
                       end_coords=end_coords,
                       title=title)

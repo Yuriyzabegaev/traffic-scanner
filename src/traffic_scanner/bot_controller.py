@@ -34,11 +34,15 @@ COORDS_REGEX = re.compile(r'-?\d+\.\d+')
 COORDS_FROM_URL_REGEX = re.compile(r'\"point\":[^}]*-?\d+\.\d+')
 
 
-def check_cancel(update):
-    if update.message.text == '/cancel':
-        update.message.reply_text(BotController.RESPONSE_ON_CANCEL)
-        return True
-    return False
+def cancelable(func):
+
+    def closure(controller, update, context):
+        if update.message.text == '/cancel':
+            update.message.reply_text(BotController.RESPONSE_ON_CANCEL)
+            return ConversationHandler.END
+        return func(controller, update, context)
+
+    return closure
 
 
 def get_coords_string_from_url(input_string):
@@ -70,7 +74,7 @@ def parse_coordinates_or_url(input_str):
 
 class BotController:
 
-    ENTER_START, ENTER_FINISH, = range(2)
+    ENTER_START, ENTER_FINISH, ENTER_TITLE = range(3)
 
     RESPONSE_ON_START = ('''
     Hello!
@@ -82,6 +86,7 @@ class BotController:
     ''')
     PROPOSAL_ENTER_START = 'Enter start point coordinates or url'
     PROPOSAL_COORDINATES_INSTEAD_OF_URL = 'Could you send coordinates please?'
+    PROPOSAL_ENTER_LOCATION_TITLE = 'Now please enter name for this route'
     RESPONSE_ON_CANCEL = 'Ok'
     RESPONSE_ON_SUCCESS = 'Ok'
     FAILURE_PARSING_COORDINATES = '''Could not understand your coordinates
@@ -103,9 +108,8 @@ class BotController:
     def start(update, context):
         update.message.reply_text(BotController.RESPONSE_ON_START)
 
+    @cancelable
     def enter_start(self, update, context):
-        if check_cancel(update):
-            return ConversationHandler.END
         try:
             l1, l0 = parse_coordinates_or_url(update.message.text)
         except ValueError:
@@ -119,9 +123,8 @@ class BotController:
         update.message.reply_text('Now enter finish coordinates')
         return self.ENTER_FINISH
 
+    @cancelable
     def enter_finish(self, update, context):
-        if check_cancel(update):
-            return ConversationHandler.END
         try:
             l1, l0 = parse_coordinates_or_url(update.message.text)
         except ValueError:
@@ -131,7 +134,15 @@ class BotController:
             update.message.reply_text(BotController.PROPOSAL_COORDINATES_INSTEAD_OF_URL)
             return BotController.ENTER_FINISH
         context.chat_data['finish_location'] = l0, l1
-        self.traffic_scanner.add_route(context.chat_data['start_location'], context.chat_data['finish_location'])
+        update.message.reply_text(BotController.PROPOSAL_ENTER_LOCATION_TITLE)
+        return BotController.ENTER_TITLE
+
+    @cancelable
+    def enter_title(self, update, context):
+        title = update.message.text
+        self.traffic_scanner.add_route(context.chat_data['start_location'],
+                                       context.chat_data['finish_location'],
+                                       title=title)
         update.message.reply_text(BotController.RESPONSE_ON_SUCCESS)
         return ConversationHandler.END
 
@@ -184,6 +195,9 @@ conv_handler = ConversationHandler(
         bc.ENTER_FINISH: [MessageHandler(
             Filters.text,
             bc.enter_finish)],
+        bc.ENTER_TITLE: [MessageHandler(
+            Filters.text,
+            bc.enter_title)]
     },
     fallbacks=[]
 )

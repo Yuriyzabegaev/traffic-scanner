@@ -21,10 +21,7 @@ class TrafficView:
 
     @staticmethod
     def seconds_to_time(seconds):
-        hour = math.floor(seconds / HOUR)
-        minute = math.floor((seconds % HOUR) / MINUTE)
-        second = math.floor(seconds % MINUTE)
-        return datetime.datetime(2011, 1, 11, hour, minute, second)
+        return datetime.datetime.fromtimestamp(seconds)
 
     def plot_traffic(self, timestamps, durations):
         datetimes = tuple(map(datetime.datetime.fromtimestamp, timestamps))
@@ -58,8 +55,8 @@ class TrafficView:
         ax = fig.gca()
 
         ax.xaxis_date()
-        ax.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
         ax.yaxis.set_major_formatter(md.DateFormatter('%H:%M'))
+        ax.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
 
         # Casting to time
         # max_ = tuple(map(self.seconds_to_time, max_))

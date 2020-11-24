@@ -1,4 +1,5 @@
 import io
+import traceback
 
 import numpy as np
 import re
@@ -105,6 +106,7 @@ class BotController:
         self.traffic_scanner.storage.remove_route(route)
 
     def start(self, update, context):
+        raise ValueError('error test MESSAGE')
         self.traffic_scanner.storage.update_user(User(user_idx=update.message.from_user.id, timezone=+3))
         update.message.reply_text(BotController.RESPONSE_ON_START)
 
@@ -168,6 +170,7 @@ class BotController:
 def error_callback(update, context):
     if update is not None:
         update.message.reply_text(str(context.error))
+        update.message.reply_text(traceback.format_exc())
 
     raise context.error
 

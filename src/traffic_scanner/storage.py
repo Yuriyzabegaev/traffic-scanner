@@ -2,8 +2,9 @@ from itertools import count
 import time
 from abc import ABC, abstractmethod
 import csv
-from typing import Optional
+from typing import List
 import re
+from dataclasses import dataclass, field
 
 import pandas as pd
 from pathlib import Path
@@ -12,30 +13,27 @@ from pathlib import Path
 COORDS_REGEX = re.compile(r'-?\d+\.\d+')
 
 
+@dataclass
 class Route:
-
-    def __init__(self, start_coords, end_coords, title, idx=None, user_idx=None):
-        self.start_coords: [float, float] = tuple(map(float, start_coords))
-        self.end_coords: [float, float] = tuple(map(float, end_coords))
-        self.title: str = title
-        self.idx: Optional[int] = idx
-        self.user_idx: Optional[int] = user_idx
+    start_coords: [float, float]
+    end_coords: [float, float]
+    title: str
+    idx: int = field(default=None)
+    user_idx: int = field(default=None)
 
 
+@dataclass
 class RouteTrafficReport:
-
-    def __init__(self, route, timestamps, durations, timezone):
-        self.route: Route = route
-        self.timestamps = timestamps
-        self.durations = durations
-        self.timezone = timezone
+    route: Route
+    timestamps: List
+    durations: List
+    timezone: int
 
 
+@dataclass
 class User:
-
-    def __init__(self, user_idx, timezone):
-        self.timezone = timezone
-        self.user_idx = user_idx
+    timezone: int
+    user_idx: int
 
 
 class TrafficStorage(ABC):

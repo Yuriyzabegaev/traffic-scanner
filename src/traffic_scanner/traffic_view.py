@@ -1,9 +1,19 @@
 import datetime
 import logging
 import math
+import time
 
 import numpy as np
 from matplotlib import pyplot as plt, dates as md
+
+plt.rcParams.update(plt.rcParamsDefault)
+plt.style.use([
+    'dark_background',
+    # 'seaborn-pastel',
+    # 'seaborn-darkgrid',
+    # 'seaborn'
+])
+plt.rcParams.update({'figure.figsize': [12, 4]})
 
 MINUTE = 60
 HOUR = 60 * MINUTE
@@ -11,63 +21,65 @@ DAY = 24 * HOUR
 
 logger = logging.getLogger('traffic_scanner/traffic_view.py')
 
+DAYS_OF_WEEK = 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+
 
 class TrafficView:
 
     def __init__(self, period):
         assert period < 24 * 60 * 60
-        self.time_intervals = math.ceil(DAY / period)
-        self.timedelta = datetime.timedelta(seconds=period)
+        self.num_time_intervals = math.ceil(DAY / period)
+        self.timedelta = period
 
-    @staticmethod
-    def seconds_to_time(seconds):
-        return datetime.datetime.fromtimestamp(seconds)
+    def plot_traffic(self, timestamps, durations, timezone, route_name):
+        durations, nonzero_intervals = sort_days_intervals(np.array(timestamps) + timezone,
+                                                           durations,
+                                                           self.timedelta)
 
-    def plot_traffic(self, timestamps, durations, timezone):
-        datetimes = tuple(map(datetime.datetime.fromtimestamp, timestamps))
-        time_intervals = []
-        durations_in_time_intervals = []
-
-        time_start = datetime.datetime.min
-        time_end = datetime.datetime.min + self.timedelta
-        nonzero_idx = []
-        for i in range(self.time_intervals):
-            durations_in_this_interval = tuple(durations[j] for j in range(len(datetimes))
-                                               if time_start.time() <= datetimes[j].time() < time_end.time())
-            if len(durations_in_this_interval) != 0:
-                # TODO: Handle nans
-                nonzero_idx.append(i)
-            durations_in_time_intervals.append(durations_in_this_interval)
-            time_intervals.append(time_start.time())
-            time_start += self.timedelta
-            time_end += self.timedelta
-
-        # Removing empty
-        durations_in_time_intervals = tuple(filter(len, durations_in_time_intervals))
-        time_intervals = np.array(time_intervals)[nonzero_idx]
-
-        alpha = 0.6
-        fig = plt.figure(figsize=(12, 4))
-        max_ = tuple(map(np.max, durations_in_time_intervals))
-        mean = tuple(map(np.mean, durations_in_time_intervals))
-        min_ = tuple(map(np.min, durations_in_time_intervals))
-        x_labels = tuple(map(lambda x: datetime.datetime(2011, 11, 11, x.hour + timezone, x.minute, x.second),
-                             time_intervals))
+        fig = plt.figure()
         ax = fig.gca()
-
-        ax.xaxis_date()
-        ax.yaxis.set_major_formatter(md.DateFormatter('%H:%M'))
-        ax.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
-
-        # Casting to time
-        # max_ = tuple(map(self.seconds_to_time, max_))
-        # min_ = tuple(map(self.seconds_to_time, min_))
-        mean = tuple(map(self.seconds_to_time, mean))
-
-        # ax.bar(x_labels, max_, alpha=0.8, label='Max', width=0.013, color='orange')
-        # ax.bar(x_labels, min_, alpha=alpha, label='Min', width=0.015, color='blue')
-        ax.bar(x_labels, mean, alpha=0.8, label='Mean', width=0.015, color='green')
-
-        ax.set_ylim(np.min(mean) - datetime.timedelta(minutes=10), np.max(mean) + datetime.timedelta(minutes=10))
+        for day_idx, day in enumerate(DAYS_OF_WEEK):
+            nonzero_intervals_day = np.array(nonzero_intervals[day_idx]) * self.timedelta
+            if len(nonzero_intervals_day) == 0:
+                continue
+            durations_day = tuple(map(int, map(np.mean, durations[day_idx])))
+            y_labels = tuple(map(lambda x: time.strftime('%H:%M', x), map(time.gmtime, durations_day)))
+            x_labels = tuple(map(datetime.datetime.fromtimestamp, nonzero_intervals_day))
+            ax.xaxis_date()
+            ax.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
+            ax.plot(x_labels, y_labels, label=day)
+        ax.set_title(route_name)
         fig.legend()
         return fig
+
+
+def sort_days_intervals(timestamps, durations, timedelta):
+    dates = np.array(list(map(datetime.datetime.fromtimestamp, timestamps)))
+    durations = np.array(durations)
+    dates_days_indices = argsort_days(dates)
+    durations_days_intervals = []
+    nonzero_intervals = []
+    for dates_day_idx in dates_days_indices:
+        dates_day = dates[dates_day_idx]
+        durations_day = durations[dates_day_idx]
+        dates_intervals_indices = argsort_time(dates_day, timedelta)
+        nonzero_intervals.append([i for i in range(len(dates_intervals_indices))
+                                  if len(dates_intervals_indices[i]) > 0])
+
+        durations_days_intervals.append([durations_day[dates_intervals_idx]
+                                         for dates_intervals_idx in dates_intervals_indices
+                                         if len(durations_day[dates_intervals_idx]) > 0])
+    return (
+        durations_days_intervals,
+        nonzero_intervals
+    )
+
+
+def argsort_days(dates):
+    return [[j for j in range(len(dates)) if dates[j].day % 7 == i] for i in range(7)]
+
+
+def argsort_time(dates, time_interval):
+    num_intervals = math.ceil(DAY / time_interval)
+    return [[j for j in range(len(dates)) if time_interval * i <= dates[j].hour * 3600 < time_interval * (i + 1)]
+            for i in range(num_intervals)]

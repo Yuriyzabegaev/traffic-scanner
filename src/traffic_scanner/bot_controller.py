@@ -7,21 +7,13 @@ from requests import get as get_request
 from requests.exceptions import MissingSchema, HTTPError
 from telegram import InputFile
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters
-import csv
 import logging
-import pandas as pd
-import matplotlib
 
 from traffic_scanner.storage import TrafficStorageCSV, User
 from traffic_scanner.yandex_maps_client import YandexMapsClient
-
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 from traffic_scanner.traffic_scanner import TrafficScanner
 from traffic_scanner.traffic_view import TrafficView
 
-plt.style.use('fivethirtyeight')
 
 logger = logging.getLogger('traffic_scanner/bot_controller.py')
 np.seterr(all="ignore")
@@ -59,11 +51,9 @@ def parse_coordinates_or_url(input_str):
     # Determine if input_str is url or coordinates
     try:
         coords_string = get_coords_string_from_url(input_str)
-        is_url = True
     except MissingSchema:
         # This is not an url
         coords_string = input_str
-        is_url = False
 
     # User sent coordinates
     coords = COORDS_REGEX.findall(coords_string)
@@ -106,7 +96,6 @@ class BotController:
         self.traffic_scanner.storage.remove_route(route)
 
     def start(self, update, context):
-        raise ValueError('error test MESSAGE')
         self.traffic_scanner.storage.update_user(User(user_idx=update.message.from_user.id, timezone=+3))
         update.message.reply_text(BotController.RESPONSE_ON_START)
 
@@ -151,7 +140,8 @@ class BotController:
 
     def build_report(self, update, context):
         reports = map(self.traffic_scanner.storage.make_report, self.traffic_scanner.storage.get_routes())
-        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations, r.timezone) for r in reports
+        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations, r.timezone, r.route.title)
+                   for r in reports
                    if len(r.timestamps) > 0]
         if len(figures) == 0:
             update.message.reply_text('No routes')

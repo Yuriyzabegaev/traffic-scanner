@@ -9,7 +9,9 @@ from telegram import InputFile
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters
 import logging
 
-from traffic_scanner.storage import TrafficStorageCSV, User
+from traffic_scanner.storage.storage_pandas import TrafficStorageCSV
+from traffic_scanner.storage.storage_sqlalchemy import TrafficStorageSQL
+from traffic_scanner.storage import User
 from traffic_scanner.yandex_maps_client import YandexMapsClient
 from traffic_scanner.traffic_scanner import TrafficScanner
 from traffic_scanner.traffic_view import TrafficView
@@ -21,6 +23,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 MINUTE = 60 * 60
+
+TIMEZONE = +3
 
 
 COORDS_REGEX = re.compile(r'-?\d+\.\d+')
@@ -60,21 +64,19 @@ def parse_coordinates_or_url(input_str):
     if len(coords) != 2:
         raise ValueError
 
-    return coords[1], coords[0]
+    return float(coords[1]), float(coords[0])
 
 
 class BotController:
 
     ENTER_START, ENTER_FINISH, ENTER_TITLE = range(3)
 
-    RESPONSE_ON_START = ('''
-    Hello!
-    
-    Commands:
-    /add
-    /list
-    /report
-    ''')
+    RESPONSE_ON_START = ('''Hello!
+
+Commands:
+/list
+/report
+''')
     PROPOSAL_ENTER_START = 'Enter start point coordinates or url'
     PROPOSAL_COORDINATES_INSTEAD_OF_URL = 'Could you send coordinates please?'
     PROPOSAL_ENTER_LOCATION_TITLE = 'Now please enter name for this route'
@@ -93,11 +95,13 @@ class BotController:
     '''BOT COMMANDS'''
 
     def remove_route(self, route):
-        self.traffic_scanner.storage.remove_route(route)
+        with self.traffic_scanner.storage.session_scope() as s:
+            self.traffic_scanner.storage.remove_route(route, s)
 
     def start(self, update, context):
-        self.traffic_scanner.storage.update_user(User(user_idx=update.message.from_user.id, timezone=+3))
-        update.message.reply_text(BotController.RESPONSE_ON_START)
+        with self.traffic_scanner.storage.session_scope() as s:
+            self.traffic_scanner.storage.update_user(User(user_id=update.message.from_user.id, timezone=TIMEZONE), s=s)
+            update.message.reply_text(BotController.RESPONSE_ON_START)
 
     @cancelable
     def enter_start(self, update, context):
@@ -130,31 +134,38 @@ class BotController:
 
     @cancelable
     def enter_title(self, update, context):
-        title = update.message.text
-        self.traffic_scanner.add_route(context.chat_data['start_location'],
-                                       context.chat_data['finish_location'],
-                                       title=title,
-                                       user_idx=update.message.from_user)
+        with self.traffic_scanner.storage.session_scope() as s:
+            title = update.message.text
+            self.traffic_scanner.add_route(context.chat_data['start_location'],
+                                           context.chat_data['finish_location'],
+                                           title=title,
+                                           user_idx=update.message.from_user.id,
+                                           s=s)
         update.message.reply_text(BotController.RESPONSE_ON_SUCCESS)
         return ConversationHandler.END
 
     def build_report(self, update, context):
-        reports = map(self.traffic_scanner.storage.make_report, self.traffic_scanner.storage.get_routes())
-        figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations, r.timezone, r.route.title)
-                   for r in reports
-                   if len(r.timestamps) > 0]
-        if len(figures) == 0:
-            update.message.reply_text('No routes')
-        for fig in figures:
-            with io.BytesIO() as buf:
-                fig.savefig(buf, format='png')
-                buf.seek(0)
-                plot_file = InputFile(buf)
-            update.message.reply_photo(plot_file)
+        with self.traffic_scanner.storage.session_scope() as s:
+            user_id = update.message.from_user.id
+            reports = (self.traffic_scanner.storage.make_report(r, s)
+                       for r in self.traffic_scanner.storage.get_routes(user_id, s))
+            figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations, r.timezone, r.route.title)
+                       for r in reports
+                       if len(r.timestamps) > 0]
+            if len(figures) == 0:
+                update.message.reply_text('No routes')
+            for fig in figures:
+                with io.BytesIO() as buf:
+                    fig.savefig(buf, format='png')
+                    buf.seek(0)
+                    plot_file = InputFile(buf)
+                update.message.reply_photo(plot_file)
 
     def list_routes(self, update, context):
-        routes = [route.title for route in self.traffic_scanner.storage.get_routes()]
-        update.message.reply_text(str(routes))
+        with self.traffic_scanner.storage.session_scope() as s:
+            user_id = update.message.from_user.id
+            routes = [route.title for route in self.traffic_scanner.storage.get_routes(user_id, s)]
+            update.message.reply_text(str(routes))
 
 
 def error_callback(update, context):
@@ -167,7 +178,7 @@ def error_callback(update, context):
 
 period = 10 * 60
 yandex_map_client = YandexMapsClient()
-storage = TrafficStorageCSV()
+storage = TrafficStorageSQL(db_url='sqlite:///../db_test')
 traffic_scanner = TrafficScanner(period=period, yandex_maps_client=yandex_map_client, storage=storage)
 traffic_plotter = TrafficView(period * 3)
 bc = BotController(traffic_scanner=traffic_scanner,

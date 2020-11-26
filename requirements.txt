@@ -1,6 +1,5 @@
-pytz
 python-telegram-bot
-pandas
+sqlalchemy
 matplotlib
 numpy
 requests

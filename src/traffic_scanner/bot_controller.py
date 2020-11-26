@@ -1,5 +1,6 @@
 import io
 import traceback
+import os
 
 import numpy as np
 import re
@@ -9,7 +10,6 @@ from telegram import InputFile
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters
 import logging
 
-from traffic_scanner.storage.storage_pandas import TrafficStorageCSV
 from traffic_scanner.storage.storage_sqlalchemy import TrafficStorageSQL
 from traffic_scanner.storage import User
 from traffic_scanner.yandex_maps_client import YandexMapsClient
@@ -178,17 +178,16 @@ def error_callback(update, context):
 
 period = 10 * 60
 yandex_map_client = YandexMapsClient()
-storage = TrafficStorageSQL(db_url='sqlite:///../db_test')
+storage = TrafficStorageSQL(db_url=os.environ['DATABASE_URL'])
 traffic_scanner = TrafficScanner(period=period, yandex_maps_client=yandex_map_client, storage=storage)
 traffic_plotter = TrafficView(period * 3)
 bc = BotController(traffic_scanner=traffic_scanner,
                    traffic_plotter=traffic_plotter,
                    traffic_parser=None)
-updater = Updater(token=
-                  # '672100742:AAEC7GTgY32rkDB5mBdYmqxPvO2gXLRREs0',  # prod bot
-                  '853266267:AAGw5iNAOrLVMWLjsHcesEFLpS8QfX1fFqA',  # dev bot
-                  use_context=True)
+updater = Updater(token=os.environ['TELEGRAM_BOT_TOKEN'])
+
 dp = updater.dispatcher
+
 conv_handler = ConversationHandler(
     entry_points=[MessageHandler(
             Filters.text,

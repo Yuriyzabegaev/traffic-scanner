@@ -52,6 +52,7 @@ class YandexMapsClient:
         self.csrf_token = None
         self.session_id = None
         self.t_session_start = -1
+        self.update_session()
 
     @staticmethod
     def generate_random_session_id():

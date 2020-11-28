@@ -32,7 +32,7 @@ class TrafficView:
         self.timedelta = period
 
     def plot_traffic(self, timestamps, durations, timezone, route_name):
-        durations, nonzero_intervals = sort_days_intervals(np.array(timestamps) + timezone,
+        durations, nonzero_intervals = sort_days_intervals(np.array(timestamps) + timezone * HOUR,
                                                            durations,
                                                            self.timedelta)
 
@@ -43,9 +43,14 @@ class TrafficView:
             if len(nonzero_intervals_day) == 0:
                 continue
             durations_day = tuple(map(int, map(np.mean, durations[day_idx])))
-            y_labels = tuple(map(lambda x: time.strftime('%H:%M', x), map(time.gmtime, durations_day)))
-            x_labels = tuple(map(datetime.datetime.fromtimestamp, nonzero_intervals_day))
-            ax.xaxis_date()
+            if np.max(durations_day) <= DAY:
+                y_labels = tuple(map(datetime.datetime.utcfromtimestamp, durations_day))
+                ax.yaxis.set_major_formatter(md.DateFormatter('%H:%M'))
+            else:
+                y_labels = [ts / HOUR for ts in durations_day]
+                ax.set_ylabel('Hours')
+
+            x_labels = tuple(map(datetime.datetime.utcfromtimestamp, nonzero_intervals_day))
             ax.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
             ax.plot(x_labels, y_labels, label=day)
         ax.set_title(route_name)
@@ -79,7 +84,12 @@ def argsort_days(dates):
     return [[j for j in range(len(dates)) if dates[j].day % 7 == i] for i in range(7)]
 
 
+def date_in_interval(time_interval, i, date):
+    return time_interval * i <= date.hour * HOUR + date.minute * MINUTE + date.second < time_interval * (i + 1)
+
+
 def argsort_time(dates, time_interval):
     num_intervals = math.ceil(DAY / time_interval)
-    return [[j for j in range(len(dates)) if time_interval * i <= dates[j].hour * 3600 < time_interval * (i + 1)]
+    return [[j for j in range(len(dates))
+             if date_in_interval(time_interval, i, dates[j])]
             for i in range(num_intervals)]

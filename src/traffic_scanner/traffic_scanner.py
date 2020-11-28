@@ -21,7 +21,6 @@ class TrafficScanner:
         self.scan_route(route, s)
 
     def update_traffic(self, s):
-        self.yandex_maps_client.update_session()
         routes = self.storage.get_routes(user_id=None, s=s)
         for route in routes:
             self.scan_route(route, s)
@@ -45,8 +44,8 @@ class TrafficScanner:
         logger.info('Start serving.')
         while True:
             t0 = time.time()
-            with self.storage.session_scope() as s:
-                self.update_traffic(s)
             sleep_time = max(self.period - (time.time() - t0), 0)
             logger.info(f'Sleeping for {sleep_time} seconds.')
             time.sleep(sleep_time)
+            with self.storage.session_scope() as s:
+                self.update_traffic(s)

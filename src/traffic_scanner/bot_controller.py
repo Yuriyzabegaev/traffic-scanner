@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 
 MINUTE = 60 * 60
 
-TIMEZONE = +3
+TIMEZONE = os.environ.get('TIMEZONE', +3)
 
 
 COORDS_REGEX = re.compile(r'-?\d+\.\d+')
@@ -55,16 +55,21 @@ def parse_coordinates_or_url(input_str):
     # Determine if input_str is url or coordinates
     try:
         coords_string = get_coords_string_from_url(input_str)
+        swap_result = True
     except MissingSchema:
         # This is not an url
         coords_string = input_str
+        swap_result = False
 
     # User sent coordinates
     coords = COORDS_REGEX.findall(coords_string)
     if len(coords) != 2:
         raise ValueError
 
-    return float(coords[1]), float(coords[0])
+    if swap_result:
+        return float(coords[1]), float(coords[0])
+    else:
+        return float(coords[0]), float(coords[1])
 
 
 class BotController:
@@ -180,7 +185,7 @@ period = 10 * 60
 yandex_map_client = YandexMapsClient()
 storage = TrafficStorageSQL(db_url=os.environ['DATABASE_URL'])
 traffic_scanner = TrafficScanner(period=period, yandex_maps_client=yandex_map_client, storage=storage)
-traffic_plotter = TrafficView(period * 3)
+traffic_plotter = TrafficView(period)
 bc = BotController(traffic_scanner=traffic_scanner,
                    traffic_plotter=traffic_plotter,
                    traffic_parser=None)

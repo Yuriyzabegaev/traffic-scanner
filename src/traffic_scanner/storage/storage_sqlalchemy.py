@@ -46,7 +46,7 @@ Session = sessionmaker()
 class TrafficStorageSQL(TrafficStorage):
 
     def __init__(self, db_url):
-        engine = create_engine(db_url, echo=True)
+        engine = create_engine(db_url, echo=False)
         metadata.create_all(engine)
         Session.configure(bind=engine)
 

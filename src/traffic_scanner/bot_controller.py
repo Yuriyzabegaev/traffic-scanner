@@ -1,30 +1,16 @@
 import io
-import traceback
-import os
-
-import numpy as np
+import logging
 import re
+
 from requests import get as get_request
 from requests.exceptions import MissingSchema, HTTPError
 from telegram import InputFile
-from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters
-import logging
+from telegram.ext import CommandHandler, MessageHandler, ConversationHandler, Filters
 
-from traffic_scanner.storage.storage_sqlalchemy import TrafficStorageSQL
-from traffic_scanner.storage import User
-from traffic_scanner.yandex_maps_client import YandexMapsClient
 from traffic_scanner.traffic_scanner import TrafficScanner
 from traffic_scanner.traffic_view import TrafficView
 
-
 logger = logging.getLogger('traffic_scanner/bot_controller.py')
-np.seterr(all="ignore")
-logging.basicConfig(level=logging.INFO)
-
-
-MINUTE = 60 * 60
-
-TIMEZONE = os.environ.get('TIMEZONE', +3)
 
 
 COORDS_REGEX = re.compile(r'-?\d+\.\d+')
@@ -57,15 +43,14 @@ def parse_coordinates_or_url(input_str):
         coords_string = get_coords_string_from_url(input_str)
         swap_result = True
     except MissingSchema:
-        # This is not an url
+        # This is not an url, user sent coordinates
         coords_string = input_str
         swap_result = False
 
-    # User sent coordinates
     coords = COORDS_REGEX.findall(coords_string)
-    if len(coords) != 2:
-        raise ValueError
 
+    if len(coords) < 2:
+        raise ValueError('Could not find l0 and l1 in coordinates regex')
     if swap_result:
         return float(coords[1]), float(coords[0])
     else:
@@ -92,10 +77,33 @@ Commands:
  Please, send coordinates or link from Yandex maps
  '''
 
-    def __init__(self, traffic_scanner, traffic_plotter, traffic_parser):
-        self.traffic_parser = traffic_parser
+    def __init__(self, traffic_scanner, traffic_plotter):
         self.traffic_scanner: TrafficScanner = traffic_scanner
         self.traffic_plotter: TrafficView = traffic_plotter
+
+    def initialize_dispatcher(self, dispatcher):
+        conversation_handler = ConversationHandler(
+            entry_points=[MessageHandler(
+                Filters.text,
+                self.enter_start)],
+            states={
+                self.ENTER_START: [MessageHandler(
+                    Filters.text,
+                    self.enter_start)],
+                self.ENTER_FINISH: [MessageHandler(
+                    Filters.text,
+                    self.enter_finish)],
+                self.ENTER_TITLE: [MessageHandler(
+                    Filters.text,
+                    self.enter_title)]
+            },
+            fallbacks=[]
+        )
+
+        dispatcher.add_handler(CommandHandler('start', self.start))
+        dispatcher.add_handler(CommandHandler('report', self.build_report))
+        dispatcher.add_handler(CommandHandler('list', self.list_routes))
+        dispatcher.add_handler(conversation_handler)
 
     '''BOT COMMANDS'''
 
@@ -103,10 +111,9 @@ Commands:
         with self.traffic_scanner.storage.session_scope() as s:
             self.traffic_scanner.storage.remove_route(route, s)
 
-    def start(self, update, context):
-        with self.traffic_scanner.storage.session_scope() as s:
-            self.traffic_scanner.storage.update_user(User(user_id=update.message.from_user.id, timezone=TIMEZONE), s=s)
-            update.message.reply_text(BotController.RESPONSE_ON_START)
+    @staticmethod
+    def start(update, context):
+        update.message.reply_text(BotController.RESPONSE_ON_START)
 
     @cancelable
     def enter_start(self, update, context):
@@ -171,54 +178,3 @@ Commands:
             user_id = update.message.from_user.id
             routes = [route.title for route in self.traffic_scanner.storage.get_routes(user_id, s)]
             update.message.reply_text(str(routes))
-
-
-def error_callback(update, context):
-    if update is not None:
-        update.message.reply_text(str(context.error))
-        update.message.reply_text(traceback.format_exc())
-
-    raise context.error
-
-
-period = 10 * 60
-yandex_map_client = YandexMapsClient()
-storage = TrafficStorageSQL(db_url=os.environ['DATABASE_URL'])
-traffic_scanner = TrafficScanner(period=period, yandex_maps_client=yandex_map_client, storage=storage)
-traffic_plotter = TrafficView(period)
-bc = BotController(traffic_scanner=traffic_scanner,
-                   traffic_plotter=traffic_plotter,
-                   traffic_parser=None)
-updater = Updater(token=os.environ['TELEGRAM_BOT_TOKEN'])
-
-dp = updater.dispatcher
-
-conv_handler = ConversationHandler(
-    entry_points=[MessageHandler(
-            Filters.text,
-            bc.enter_start)],
-    states={
-        bc.ENTER_START: [MessageHandler(
-            Filters.text,
-            bc.enter_start)],
-        bc.ENTER_FINISH: [MessageHandler(
-            Filters.text,
-            bc.enter_finish)],
-        bc.ENTER_TITLE: [MessageHandler(
-            Filters.text,
-            bc.enter_title)]
-    },
-    fallbacks=[]
-)
-
-dp.add_handler(CommandHandler('start', bc.start))
-dp.add_handler(CommandHandler('report', bc.build_report))
-dp.add_handler(CommandHandler('list', bc.list_routes))
-dp.add_handler(conv_handler)
-dp.add_error_handler(error_callback)
-
-
-def main():
-    dp.run_async(bc.traffic_scanner.serve)
-    updater.start_polling()
-    updater.idle()

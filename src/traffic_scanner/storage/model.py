@@ -1,12 +1,13 @@
+import os
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Tuple
+from dataclasses import dataclass, field
+from typing import Tuple, Optional
 
 
 @dataclass
 class User:
-    timezone: int
     user_id: int
+    timezone: Optional[int] = field(default=None)
 
 
 @dataclass
@@ -42,7 +43,7 @@ class RouteTrafficReport:
 
     @property
     def timezone(self) -> int:
-        return self.route.user.timezone
+        return self.route.user.timezone or os.environ['TIMEZONE']
 
 
 class TrafficStorage(ABC):

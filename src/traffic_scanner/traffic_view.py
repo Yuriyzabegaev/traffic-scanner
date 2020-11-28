@@ -1,7 +1,6 @@
 import datetime
 import logging
 import math
-import time
 
 import numpy as np
 from matplotlib import pyplot as plt, dates as md
@@ -81,7 +80,7 @@ def sort_days_intervals(timestamps, durations, timedelta):
 
 
 def argsort_days(dates):
-    return [[j for j in range(len(dates)) if dates[j].day % 7 == i] for i in range(7)]
+    return [[j for j in range(len(dates)) if dates[j].weekday() % 7 == i] for i in range(7)]
 
 
 def date_in_interval(time_interval, i, date):

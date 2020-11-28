@@ -1,8 +1,8 @@
 import time
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Float
+from sqlalchemy import create_engine
 from sqlalchemy.orm import mapper, relationship, sessionmaker
 
 from traffic_scanner.storage import User, Route, RouteTrafficReport, TrafficStorage, Traffic
@@ -14,7 +14,7 @@ metadata = MetaData()
 users_table = Table(
     'users', metadata,
     Column('user_id', Integer, primary_key=True),
-    Column('timezone', Integer),
+    Column('timezone', Integer, nullable=True),
 )
 
 routes_table = Table(
@@ -74,7 +74,7 @@ class TrafficStorageSQL(TrafficStorage):
     def add_route(self, start_coords, end_coords, title, user_id, s) -> Route:
         user = s.query(User).filter_by(user_id=user_id).first()
         if user is None:
-            raise ValueError('User not found, /start may help')  # TODO: Bad practise
+            self.update_user(User(user_id=user_id, timezone=None), s)
         route = Route(start_l0=start_coords[0],
                       start_l1=start_coords[1],
                       end_l0=end_coords[0],

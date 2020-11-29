@@ -68,22 +68,25 @@ class YandexMapsClient:
             self.cookies = resp.cookies
             self.renew_csrf_token()
             self.session_id = self.generate_random_session_id()
-            self.session_id = '1605440452714_990932'
+            # self.session_id = '1605440452714_990932'
             self.t_session_start = time.time()
 
     @sleep_before_run
-    def renew_csrf_token(self):
-        resp = r.get(self.ENDPOINT + 'api/router/buildRoute/', headers=self.HEADERS, cookies=self.cookies)
-        resp.raise_for_status()
-        self.cookies.update(resp.cookies)
-        try:
-            self.csrf_token = resp.json()['csrfToken']
-        except ValueError or IndexError as e:
-            logger.error(f'Invalid response: {resp.text}')
-            raise e
+    def renew_csrf_token(self, csrf_token=None):
+        if csrf_token is None:
+            resp = r.get(self.ENDPOINT + 'api/router/buildRoute/', headers=self.HEADERS, cookies=self.cookies)
+            resp.raise_for_status()
+            self.cookies.update(resp.cookies)
+            try:
+                csrf_token = resp.json()['csrfToken']
+            except ValueError or IndexError as e:
+                logger.error(f'Invalid response: {resp.text}')
+                raise e
+
+        self.csrf_token = csrf_token
 
     @sleep_before_run
-    def build_route(self, start_coords, end_coords):
+    def build_route(self, start_coords, end_coords, can_renew_csrf_token=True):
         coords_str = f'{start_coords[0]},{start_coords[1]}~{end_coords[0]},{end_coords[1]}'
         params = {
             'activeComparisonMode': 'auto',
@@ -106,10 +109,22 @@ class YandexMapsClient:
         self.cookies.update(resp.cookies)
         resp.raise_for_status()
         try:
-            return resp.json()
+            resp_json = resp.json()
         except ValueError as e:
             logger.error(f'Invalid response: {resp.text}')
             raise e
+
+        try:
+            new_csrf_token = resp_json['csrf']
+            if can_renew_csrf_token:
+                self.renew_csrf_token(new_csrf_token)
+                resp_json = self.build_route(start_coords, end_coords, can_renew_csrf_token=False)
+            else:
+                raise ValueError('CSRF token issue')
+        except KeyError:
+            pass
+
+        return resp_json
 
     @sleep_before_run
     def get_location_title(self, coords):

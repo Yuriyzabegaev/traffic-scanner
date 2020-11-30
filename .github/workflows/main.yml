@@ -40,7 +40,7 @@ jobs:
         
   build_and_push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     needs: test
 
     steps:
@@ -63,7 +63,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     needs: build_and_push
 
     steps:

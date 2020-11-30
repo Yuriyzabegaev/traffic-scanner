@@ -18,5 +18,6 @@ jobs:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           KEY: ${{ secrets.SSHKEY }}
+          PASSPHRASE: ${{ secrets.PASSPHRASE }}
           envs: IMAGE_NAME,REGISTRY,GITHUB_SHA,COMMAND
           script: whoami

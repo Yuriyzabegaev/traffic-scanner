@@ -15,7 +15,6 @@ class TestParseCoordinates(unittest.TestCase):
         traffic_scanner = TrafficScanner(period=600, yandex_maps_client=yandex_map_client, storage=storage)
 
         with storage.session_scope() as s:
-            traffic_scanner.storage.update_user(User(user_id=user_id, timezone=+3), s)
             traffic_scanner.add_route((37.5229855552, 55.9271870459),
                                       (37.4460039634, 55.8852399212964),
                                       title='Долгопрудный -> Москва',

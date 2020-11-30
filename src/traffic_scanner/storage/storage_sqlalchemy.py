@@ -74,7 +74,8 @@ class TrafficStorageSQL(TrafficStorage):
     def add_route(self, start_coords, end_coords, title, user_id, s) -> Route:
         user = s.query(User).filter_by(user_id=user_id).first()
         if user is None:
-            self.update_user(User(user_id=user_id, timezone=None), s)
+            user = User(user_id=user_id, timezone=None)
+            self.update_user(user, s)
         route = Route(start_l0=start_coords[0],
                       start_l1=start_coords[1],
                       end_l0=end_coords[0],

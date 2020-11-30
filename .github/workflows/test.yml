@@ -1,0 +1,26 @@
+name: TEST-DOCKERHUB
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ test ]
+  pull_request:
+    branches: [ test ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  
+env:
+  IMAGE_NAME: "traffic-scanner"
+  DOCKERHUB_NAME: "yuriyzabegaev"
+
+jobs:
+        
+  build_and_push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Logging in DockerHub
+        run: docker login -u yuriyzabegaev -p {{ secrets.DOCKERHUB_ACCESS_TOKEN }}

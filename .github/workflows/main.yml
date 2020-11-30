@@ -14,6 +14,7 @@ on:
   workflow_dispatch:
   
 env:
+  REGISTRY_NAME: "traffic-scanner"
   REGISTRY: "registry.digitalocean.com/traffic-scanner"
   IMAGE_NAME: "traffic-scanner"
 
@@ -56,12 +57,12 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Delete old image from Container registry
-        run: doctl registry delete --force $(echo $REGISTRY)
+        run: doctl registry delete --force $(echo $REGISTRY_NAME)
         continue-on-error: True
 
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: |
-          doctl registry create $(echo $REGISTRY)
+          doctl registry create $(echo $REGISTRY_NAME)
           doctl registry login --expiry-seconds 600
 
       - name: Push image to DigitalOcean Container Registry

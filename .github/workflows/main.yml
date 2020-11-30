@@ -82,5 +82,5 @@ jobs:
             docker run -d \
             --restart always \
             --name $(echo $IMAGE_NAME) \
-            --env TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            --env TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
             $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)

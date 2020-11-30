@@ -14,8 +14,6 @@ on:
   workflow_dispatch:
   
 env:
-  REGISTRY_NAME: "traffic-scanner"
-  REGISTRY: "registry.digitalocean.com/traffic-scanner"
   IMAGE_NAME: "traffic-scanner"
   DOCKERHUB_NAME: "yuriyzabegaev"
 
@@ -48,12 +46,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build container image
-        run: docker build -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
-
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
 
       - name: Push image to DigitalOcean Container Registry
         run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)

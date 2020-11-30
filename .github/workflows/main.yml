@@ -17,8 +17,7 @@ env:
   REGISTRY_NAME: "traffic-scanner"
   REGISTRY: "registry.digitalocean.com/traffic-scanner"
   IMAGE_NAME: "traffic-scanner"
-
-  COMMAND: "python main.py"
+  DOCKERHUB_NAME: "yuriyzabegaev"
 
 jobs:
   test:
@@ -41,7 +40,7 @@ jobs:
         
   build_and_push:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: test
 
     steps:
@@ -56,16 +55,12 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-      - name: Log in to DigitalOcean Container Registry with short-lived credentials
-        run: |
-          doctl registry login --expiry-seconds 600
-
       - name: Push image to DigitalOcean Container Registry
-        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+        run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
 
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build_and_push
 
     steps:
@@ -75,6 +70,7 @@ jobs:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           KEY: ${{ secrets.SSHKEY }}
+          PASSPHRASE: ${{ secrets.PASSPHRASE }}
           envs: IMAGE_NAME,REGISTRY,GITHUB_SHA,COMMAND
           script: |
             # Stop running container
@@ -82,11 +78,12 @@ jobs:
 
             # Remove old container
             docker rm $(echo $IMAGE_NAME)
+            
+            #
+            docker update $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME)
 
             # Run a new container from a new image
             docker run -d \
             --restart always \
-            --env-file .env \
-            -p 8000:8000 \
             --name $(echo $IMAGE_NAME) \
-            $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) $(echo $COMMAND)
+            $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)

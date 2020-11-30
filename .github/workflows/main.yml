@@ -56,13 +56,8 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-      - name: Delete old image from Container registry
-        run: doctl registry delete --force $(echo $REGISTRY_NAME)
-        continue-on-error: True
-
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: |
-          doctl registry create $(echo $REGISTRY_NAME)
           doctl registry login --expiry-seconds 600
 
       - name: Push image to DigitalOcean Container Registry

@@ -47,8 +47,11 @@ jobs:
 
       - name: Build container image
         run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
+    
+      - name: Logging in DockerHub
+        run: docker login --username=yuriyzabegaev --password={{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-      - name: Push image to DigitalOcean Container Registry
+      - name: Push image to DockerHub
         run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
 
   deploy:

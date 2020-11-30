@@ -67,7 +67,7 @@ jobs:
           USERNAME: ${{ secrets.USERNAME }}
           KEY: ${{ secrets.SSHKEY }}
           PASSPHRASE: ${{ secrets.PASSPHRASE }}
-          envs: IMAGE_NAME,REGISTRY,GITHUB_SHA,COMMAND
+          envs: IMAGE_NAME,DOCKERHUB_NAME,GITHUB_SHA
           script: |
             # Stop running container
             docker stop $(echo $IMAGE_NAME)

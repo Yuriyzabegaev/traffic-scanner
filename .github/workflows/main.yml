@@ -60,6 +60,7 @@ jobs:
       
       - name: Delete old image from Container registry
         run: doctl registry delete --force $(echo $REGISTRY)
+        continue-on-error: True
 
       - name: Push image to DigitalOcean Container Registry
         run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)

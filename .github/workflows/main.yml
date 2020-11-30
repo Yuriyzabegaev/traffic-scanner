@@ -1,0 +1,86 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  
+env:
+  IMAGE_NAME: "traffic-scanner"
+  DOCKERHUB_NAME: "yuriyzabegaev"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies with pip
+        run: pip install -r requirements.txt
+
+      - name: Test with unittest
+        run: python -m unittest discover src
+        
+  build_and_push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: test
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Build container image
+        run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
+    
+      - name: Logging in DockerHub
+        run: docker login --username=yuriyzabegaev --password=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: Push image to DockerHub
+        run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build_and_push
+
+    steps:
+      - name: Deploy to Digital Ocean droplet via SSH action
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          KEY: ${{ secrets.SSHKEY }}
+          PASSPHRASE: ${{ secrets.PASSPHRASE }}
+          envs: IMAGE_NAME,DOCKERHUB_NAME,GITHUB_SHA
+          script: |
+            # Stop running container
+            docker stop $(echo $IMAGE_NAME)
+
+            # Remove old container
+            docker rm $(echo $IMAGE_NAME)
+            
+            # Pull image from DockerHub
+            docker pull $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+
+            # Run a new container from a new image
+            docker run -d \
+            --restart always \
+            --name $(echo $IMAGE_NAME) \
+            --env TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
+            $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)

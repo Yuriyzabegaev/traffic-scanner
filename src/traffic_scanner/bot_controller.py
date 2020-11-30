@@ -2,6 +2,7 @@ import io
 import logging
 import re
 
+from matplotlib import pyplot as plt
 from requests import get as get_request
 from requests.exceptions import MissingSchema, HTTPError
 from telegram import InputFile
@@ -172,7 +173,7 @@ Commands:
                     buf.seek(0)
                     plot_file = InputFile(buf)
                 update.message.reply_photo(plot_file)
-                fig.close()
+                plt.close(fig)
 
     def list_routes(self, update, context):
         with self.traffic_scanner.storage.session_scope() as s:

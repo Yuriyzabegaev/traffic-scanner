@@ -2,7 +2,7 @@
 
 name: CI
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
@@ -12,7 +12,7 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  
+
 env:
   IMAGE_NAME: "traffic-scanner"
   DOCKERHUB_NAME: "yuriyzabegaev"
@@ -35,7 +35,7 @@ jobs:
 
       - name: Test with unittest
         run: python -m unittest discover src
-        
+
   build_and_push:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -47,9 +47,9 @@ jobs:
 
       - name: Build container image
         run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
-    
+
       - name: Logging in DockerHub
-        run: docker login --username=yuriyzabegaev --password=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+        run: docker login --username=$(echo $DOCKERHUB_NAME) --password=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       - name: Push image to DockerHub
         run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
@@ -74,7 +74,7 @@ jobs:
 
             # Remove old container
             docker rm $(echo $IMAGE_NAME)
-            
+
             # Pull image from DockerHub
             docker pull $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
 

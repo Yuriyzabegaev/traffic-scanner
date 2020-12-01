@@ -66,9 +66,8 @@ class YandexMapsClient:
             resp = r.get(self.ENDPOINT, headers=self.HEADERS)
             resp.raise_for_status()
             self.cookies = resp.cookies
-            self.renew_csrf_token()
+            # self.renew_csrf_token()
             self.session_id = self.generate_random_session_id()
-            # self.session_id = '1605440452714_990932'
             self.t_session_start = time.time()
 
     @sleep_before_run
@@ -115,7 +114,7 @@ class YandexMapsClient:
             raise e
 
         try:
-            new_csrf_token = resp_json['csrf']
+            new_csrf_token = resp_json['csrfToken']
             if can_renew_csrf_token:
                 self.renew_csrf_token(new_csrf_token)
                 resp_json = self.build_route(start_coords, end_coords, can_renew_csrf_token=False)

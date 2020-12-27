@@ -8,6 +8,9 @@ from traffic_scanner.yandex_maps_client import YandexMapsClient
 logger = logging.getLogger('traffic_scanner/traffic_scanner.py')
 
 
+HOUR = 60 * 60
+
+
 class TrafficScanner:
 
     def __init__(self, period, yandex_maps_client: YandexMapsClient, storage: TrafficStorage):
@@ -56,3 +59,4 @@ class TrafficScanner:
                 self.serve()
             except Exception as e:
                 logger.exception(e)
+            time.sleep(HOUR)

@@ -16,7 +16,6 @@ on:
 env:
   IMAGE_NAME: "traffic-scanner"
   DOCKERHUB_NAME: "yuriyzabegaev"
-  VOLUME_HOST_PATH: "/data"
 
 
 jobs:
@@ -59,6 +58,7 @@ jobs:
   deploy:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      USERNAME: ${{ secrets.USERNAME }}
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 #    needs: build_and_push
@@ -81,9 +81,10 @@ jobs:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           KEY: ${{ secrets.SSHKEY }}
-          envs: IMAGE_NAME, DOCKERHUB_NAME, GITHUB_SHA, TELEGRAM_BOT_TOKEN, VOLUME_HOST_PATH
+          envs: IMAGE_NAME, USERNAME, TELEGRAM_BOT_TOKEN
           script: |
-            export VOLUME_HOST_PATH="${VOLUME_HOST_PATH}"
+            export VOLUME_HOST_PATH="${USERNAME}/data"
+            export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
 
             docker-compose down
 

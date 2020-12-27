@@ -62,16 +62,16 @@ jobs:
 #    needs: build_and_push
 
     steps:
-    - uses: actions/checkout@v2
-    - name: rsync deployments
-      uses: burnett01/rsync-deployments@4.1
-      with:
-        switches: -avzr --delete
-        path: ./docker-compose.yml
-        remote_path: /docker-compose.yml
-        remote_host: ${{ secrets.HOST }}
-        remote_user: ${{ secrets.USERNAME }}
-        remote_key: ${{ secrets.SSHKEY }}
+      - uses: actions/checkout@v2
+      - name: rsync deployments
+        uses: burnett01/rsync-deployments@4.1
+        with:
+          switches: -avzr --delete
+          path: ./docker-compose.yml
+          remote_path: /docker-compose.yml
+          remote_host: ${{ secrets.HOST }}
+          remote_user: ${{ secrets.USERNAME }}
+          remote_key: ${{ secrets.SSHKEY }}
 
       - name: Deploy to Digital Ocean droplet via SSH action
         uses: appleboy/ssh-action@v0.1.3

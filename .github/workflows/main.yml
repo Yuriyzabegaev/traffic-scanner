@@ -62,9 +62,16 @@ jobs:
 #    needs: build_and_push
 
     steps:
-      - name: test
-        run: ls
-#      - name: Copy docker-compose.yml
+    - uses: actions/checkout@v2
+    - name: rsync deployments
+      uses: burnett01/rsync-deployments@4.1
+      with:
+        switches: -avzr --delete
+        path: /docker-compose.yml
+        remote_path: /${{ secrets.USERNAME }}/docker-compose.yml
+        remote_host: ${{ secrets.USERNAME }}
+        remote_user: ${{ secrets.USERNAME }}
+        remote_key: ${{ secrets.SSHKEY }}
 #        uses: appleboy/scp-action@master
 #        with:
 #          host: ${{ secrets.HOST }}

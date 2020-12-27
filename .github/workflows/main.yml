@@ -73,7 +73,6 @@ jobs:
         source: "docker-compose.yml"
         target: "~"
 
-          /var/www/public_html/.htaccess root@<remote-ip>:/var/www/public_html/
       - name: Deploy to Digital Ocean droplet via SSH action
         uses: appleboy/ssh-action@v0.1.3
         with:

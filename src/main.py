@@ -37,6 +37,6 @@ bc.initialize_dispatcher(dp)
 dp.add_error_handler(error_callback)
 
 if __name__ == '__main__':
-    dp.run_async(bc.traffic_scanner.serve)
+    dp.run_async(bc.traffic_scanner.serve_restart)
     updater.start_polling()
     updater.idle()

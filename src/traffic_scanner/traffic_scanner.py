@@ -49,3 +49,10 @@ class TrafficScanner:
             sleep_time = max(self.period - (time.time() - t0), 0)
             logger.info(f'Sleeping for {sleep_time} seconds.')
             time.sleep(sleep_time)
+
+    def serve_restart(self):
+        while True:
+            try:
+                self.serve()
+            except Exception as e:
+                logger.exception(e)

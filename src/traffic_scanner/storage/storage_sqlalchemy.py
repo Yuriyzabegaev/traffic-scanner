@@ -1,4 +1,5 @@
 import time
+import logging
 from contextlib import contextmanager
 
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Float
@@ -6,6 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import mapper, relationship, sessionmaker
 
 from traffic_scanner.storage import User, Route, RouteTrafficReport, TrafficStorage, Traffic
+
+
+logger = logging.getLogger('traffic_scanner/storage/storage_sqlalchemy.py')
 
 MAX_SYMBOLS_IN_STRING = 50
 
@@ -46,6 +50,7 @@ Session = sessionmaker()
 class TrafficStorageSQL(TrafficStorage):
 
     def __init__(self, db_url):
+        logger.info(f'Using database path: {db_url}')
         engine = create_engine(db_url, echo=False)
         metadata.create_all(engine)
         Session.configure(bind=engine)

@@ -11,6 +11,7 @@ import requests as r
 logger = logging.getLogger('traffic_scanner/yandex_maps_client.py')
 REQUESTS_DELAY = 0.1
 
+DAY = 60 * 60 * 24
 
 LOCATION_TITLE_REGEX = re.compile(r'<meta property=\"og:title\" content=\"(.*?)\">')
 
@@ -46,13 +47,12 @@ class YandexMapsClient:
         'Accept-Language': 'en-us'
     }
 
-    def __init__(self, session_timeout=3600):
+    def __init__(self, session_timeout=DAY):
         self.session_timeout = session_timeout
         self.cookies = None
         self.csrf_token = None
         self.session_id = None
         self.t_session_start = -1
-        self.update_session()
 
     @staticmethod
     def generate_random_session_id():
@@ -66,7 +66,7 @@ class YandexMapsClient:
             resp = r.get(self.ENDPOINT, headers=self.HEADERS)
             resp.raise_for_status()
             self.cookies = resp.cookies
-            # self.renew_csrf_token()
+            self.renew_csrf_token()
             self.session_id = self.generate_random_session_id()
             self.t_session_start = time.time()
 
@@ -85,7 +85,31 @@ class YandexMapsClient:
         self.csrf_token = csrf_token
 
     @sleep_before_run
-    def build_route(self, start_coords, end_coords, can_renew_csrf_token=True):
+    def make_api_request(self, url, params, retry=True):
+        self.update_session()
+        resp = r.get(self.ENDPOINT + url, params=params,
+                     headers=self.HEADERS, cookies=self.cookies)
+        self.cookies.update(resp.cookies)
+        resp.raise_for_status()
+        try:
+            resp_json = resp.json()
+        except ValueError as e:
+            logger.error(f'Invalid response: {resp.text}')
+            raise e
+
+        resp_keys = resp_json.keys()
+        if 'data' in resp_keys:
+            return resp_json
+        if retry is False:
+            raise ValueError(resp_json)
+
+        if 'csrfToken' in resp_keys:
+            self.renew_csrf_token(resp_json['csrfToken'])
+        if 'error' in resp_keys:
+            logger.warning('error in api response: ' + str(resp))
+        return self.make_api_request(url, params, retry=False)
+
+    def build_route(self, start_coords, end_coords):
         coords_str = f'{start_coords[0]},{start_coords[1]}~{end_coords[0]},{end_coords[1]}'
         params = {
             'activeComparisonMode': 'auto',
@@ -103,40 +127,20 @@ class YandexMapsClient:
         params_string = urllib.parse.urlencode(params)
         params['s'] = make_s(params_string)
         logger.info(f'Building route for coordinates: {coords_str}')
-        resp = r.get(self.ENDPOINT + 'api/router/buildRoute/', params=params,
-                     headers=self.HEADERS, cookies=self.cookies)
-        self.cookies.update(resp.cookies)
-        resp.raise_for_status()
-        try:
-            resp_json = resp.json()
-        except ValueError as e:
-            logger.error(f'Invalid response: {resp.text}')
-            raise e
+        return self.make_api_request('api/router/buildRoute/', params=params)
 
-        try:
-            new_csrf_token = resp_json['csrfToken']
-            if can_renew_csrf_token:
-                self.renew_csrf_token(new_csrf_token)
-                resp_json = self.build_route(start_coords, end_coords, can_renew_csrf_token=False)
-            else:
-                raise ValueError('CSRF token issue')
-        except KeyError:
-            pass
-
-        return resp_json
-
-    @sleep_before_run
-    def get_location_title(self, coords):
-        coords_str = f'{coords[1]},{coords[0]}'
-        logger.info(f'Getting title for location at coordinates: {coords_str}')
-        params = {
-            'mode': 'search',
-            'text': coords_str,  # User verbose format
-            'z': '1'
-        }
-        resp = r.get(self.ENDPOINT, params=params, headers=self.HEADERS, cookies=self.cookies)
-        resp.raise_for_status()
-        regex_matches = LOCATION_TITLE_REGEX.search(resp.text)
-        if regex_matches is None:
-            raise ValueError('Unable to match')
-        return regex_matches.group(1)
+    # @sleep_before_run
+    # def get_location_title(self, coords):
+    #     coords_str = f'{coords[1]},{coords[0]}'
+    #     logger.info(f'Getting title for location at coordinates: {coords_str}')
+    #     params = {
+    #         'mode': 'search',
+    #         'text': coords_str,  # User verbose format
+    #         'z': '1'
+    #     }
+    #     resp = r.get(self.ENDPOINT, params=params, headers=self.HEADERS, cookies=self.cookies)
+    #     resp.raise_for_status()
+    #     regex_matches = LOCATION_TITLE_REGEX.search(resp.text)
+    #     if regex_matches is None:
+    #         raise ValueError('Unable to match')
+    #     return regex_matches.group(1)

@@ -91,7 +91,8 @@ jobs:
 #          envs: IMAGE_NAME, DOCKERHUB_NAME, GITHUB_SHA, TELEGRAM_BOT_TOKEN
 #          script: |
 #            pwd
-
+      - name: Repository checkout
+        uses: actions/checkout@v2
       - name: multiple command
         uses: appleboy/ssh-action@master
         with:

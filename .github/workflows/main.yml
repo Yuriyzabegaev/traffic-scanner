@@ -72,7 +72,6 @@ jobs:
         passphrase: ${{ secrets.PASSPHRASE }}
         source: "docker-compose.yml"
         target: "~"
-
       - name: Deploy to Digital Ocean droplet via SSH action
         uses: appleboy/ssh-action@v0.1.3
         with:

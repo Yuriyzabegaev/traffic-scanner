@@ -62,16 +62,16 @@ jobs:
 #    needs: build_and_push
 
     steps:
-#    - uses: actions/checkout@v2
-#    - name: rsync deployments
-#      uses: burnett01/rsync-deployments@4.1
-#      with:
-#        switches: -avzr --delete
-#        path: ./docker-compose.yml
-#        remote_path: /docker-compose.yml
-#        remote_host: ${{ secrets.HOST }}
-#        remote_user: ${{ secrets.USERNAME }}
-#        remote_key: ${{ secrets.SSHKEY }}
+    - uses: actions/checkout@v2
+    - name: rsync deployments
+      uses: burnett01/rsync-deployments@4.1
+      with:
+        switches: -avzr --delete
+        path: ./docker-compose.yml
+        remote_path: /docker-compose.yml
+        remote_host: ${{ secrets.HOST }}
+        remote_user: ${{ secrets.USERNAME }}
+        remote_key: ${{ secrets.SSHKEY }}
 
 #        uses: appleboy/scp-action@master
 #        with:
@@ -82,33 +82,19 @@ jobs:
 #          source: "*"
 #          target: "/${{ secrets.USERNAME }}/"
 
-#      - name: Deploy to Digital Ocean droplet via SSH action
-#        uses: appleboy/ssh-action@v0.1.3
-#        with:
-#          HOST: 138.68.65.174
-#          USERNAME: root
-#          KEY: ${{ secrets.SSHKEY }}
-#          envs: IMAGE_NAME, DOCKERHUB_NAME, GITHUB_SHA, TELEGRAM_BOT_TOKEN
-#          script: |
-#            pwd
-      - name: Repository checkout
-        uses: actions/checkout@v2
-      - name: multiple command
-        uses: appleboy/ssh-action@master
+      - name: Deploy to Digital Ocean droplet via SSH action
+        uses: appleboy/ssh-action@v0.1.3
         with:
-          host: 138.68.65.174
-          username: root
-          key: ${{ secrets.SSHKEY }}
-          debug: true
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          KEY: ${{ secrets.SSHKEY }}
+          envs: IMAGE_NAME, DOCKERHUB_NAME, GITHUB_SHA, TELEGRAM_BOT_TOKEN
           script: |
-            whoami
-            ls -al
+            docker-compose down
 
-#            docker-compose down
-#
-#            # Remove old container
-#            docker image rm $(echo $IMAGE_NAME)
-#
-#            docker-compose pull
-#
-#            docker-compose up
+            # Remove old container
+            docker image rm $(echo $IMAGE_NAME)
+
+            docker-compose pull
+
+            docker-compose up

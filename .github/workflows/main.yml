@@ -71,6 +71,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           source: "*"
           target: "/${{ secrets.USERNAME }}/"
+          debug: true
 
 #      - name: Deploy to Digital Ocean droplet via SSH action
 #        uses: appleboy/ssh-action@v0.1.3

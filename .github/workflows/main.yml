@@ -69,23 +69,23 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSHKEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          source: "./docker-compose.yml"
+          source: "*"
           target: "/${{ secrets.USERNAME }}/"
 
-      - name: Deploy to Digital Ocean droplet via SSH action
-        uses: appleboy/ssh-action@v0.1.3
-        with:
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          KEY: ${{ secrets.SSHKEY }}
-          PASSPHRASE: ${{ secrets.PASSPHRASE }}
-          envs: IMAGE_NAME, DOCKERHUB_NAME, GITHUB_SHA, TELEGRAM_BOT_TOKEN
-          script: |
-            docker-compose down
-
-            # Remove old container
-            docker image rm $(echo $IMAGE_NAME)
-
-            docker-compose pull
-
-            docker-compose up
+#      - name: Deploy to Digital Ocean droplet via SSH action
+#        uses: appleboy/ssh-action@v0.1.3
+#        with:
+#          HOST: ${{ secrets.HOST }}
+#          USERNAME: ${{ secrets.USERNAME }}
+#          KEY: ${{ secrets.SSHKEY }}
+#          PASSPHRASE: ${{ secrets.PASSPHRASE }}
+#          envs: IMAGE_NAME, DOCKERHUB_NAME, GITHUB_SHA, TELEGRAM_BOT_TOKEN
+#          script: |
+#            docker-compose down
+#
+#            # Remove old container
+#            docker image rm $(echo $IMAGE_NAME)
+#
+#            docker-compose pull
+#
+#            docker-compose up

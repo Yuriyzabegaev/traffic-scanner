@@ -62,16 +62,17 @@ jobs:
 #    needs: build_and_push
 
     steps:
-      - name: Copy docker-compose.yml
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSHKEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          source: "*"
-          target: "/${{ secrets.USERNAME }}/"
-          debug: true
+      - name: test
+        run: ls
+#      - name: Copy docker-compose.yml
+#        uses: appleboy/scp-action@master
+#        with:
+#          host: ${{ secrets.HOST }}
+#          username: ${{ secrets.USERNAME }}
+#          key: ${{ secrets.SSHKEY }}
+#          passphrase: ${{ secrets.PASSPHRASE }}
+#          source: "*"
+#          target: "/${{ secrets.USERNAME }}/"
 
 #      - name: Deploy to Digital Ocean droplet via SSH action
 #        uses: appleboy/ssh-action@v0.1.3

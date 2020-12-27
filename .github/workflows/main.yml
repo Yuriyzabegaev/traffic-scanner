@@ -73,14 +73,6 @@ jobs:
         remote_user: ${{ secrets.USERNAME }}
         remote_key: ${{ secrets.SSHKEY }}
 
-#        uses: appleboy/scp-action@master
-#        with:
-#          host: ${{ secrets.HOST }}
-#          username: ${{ secrets.USERNAME }}
-#          key: ${{ secrets.SSHKEY }}
-#          passphrase: ${{ secrets.PASSPHRASE }}
-#          source: "*"
-#          target: "/${{ secrets.USERNAME }}/"
       - name: Deploy to Digital Ocean droplet via SSH action
         uses: appleboy/ssh-action@v0.1.3
         with:

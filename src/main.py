@@ -25,6 +25,8 @@ logging.basicConfig(level=logging.INFO)
 
 period = 10 * 60
 yandex_map_client = YandexMapsClient()
+yandex_map_client.update_session()
+
 storage = TrafficStorageSQL(db_url=os.environ['DATABASE_URL'])
 traffic_scanner = TrafficScanner(period=period, yandex_maps_client=yandex_map_client, storage=storage)
 traffic_plotter = TrafficView(period)

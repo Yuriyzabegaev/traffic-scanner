@@ -95,9 +95,10 @@ jobs:
       - name: multiple command
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
+          host: 138.68.65.174
+          username: root
           key: ${{ secrets.SSHKEY }}
+          debug: true
           script: |
             whoami
             ls -al

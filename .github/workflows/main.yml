@@ -47,13 +47,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build container image
-        run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
+        run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME) .
 
       - name: Logging in DockerHub
         run: docker login --username=$(echo $DOCKERHUB_NAME) --password=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       - name: Push image to DockerHub
-        run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+        run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME)
 
   deploy:
     env:
@@ -87,9 +87,6 @@ jobs:
             export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
 
             docker-compose down
-
-            # Remove old container
-            docker image rm $(echo $IMAGE_NAME)
 
             docker-compose pull
 

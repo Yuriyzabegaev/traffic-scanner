@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Float
 from sqlalchemy import create_engine
-from sqlalchemy.orm import mapper, relationship, sessionmaker
+from sqlalchemy.orm import mapper, relationship, sessionmaker, backref
 
 from traffic_scanner.storage import User, Route, RouteTrafficReport, TrafficStorage, Traffic
 
@@ -41,8 +41,9 @@ traffic_table = Table(
 )
 
 mapper(User, users_table)
-mapper(Route, routes_table, properties={'user': relationship(User, backref='routes')})
-mapper(Traffic, traffic_table, properties={'route': relationship(Route, backref='traffic')})
+mapper(Route, routes_table, properties={'user': relationship(User, backref=backref('routes', cascade='all,delete'))})
+mapper(Traffic, traffic_table,
+       properties={'route': relationship(Route, backref=backref('traffic', cascade='all,delete'))})
 
 Session = sessionmaker()
 
@@ -93,7 +94,8 @@ class TrafficStorageSQL(TrafficStorage):
         s.add(route)
         return route
 
-    def remove_route(self, route, s) -> None:
+    def remove_route(self, user_id, route_name, s) -> None:
+        route = self.get_route(user_id=user_id, route_title=route_name, s=s)
         s.delete(route)
 
     def make_report(self, route, s) -> RouteTrafficReport:

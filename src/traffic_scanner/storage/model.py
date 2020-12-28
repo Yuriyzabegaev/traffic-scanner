@@ -69,7 +69,7 @@ class TrafficStorage(ABC):
         pass
 
     @abstractmethod
-    def remove_route(self, route, s) -> None:
+    def remove_route(self, user_id, route_name, s) -> None:
         pass
 
     @abstractmethod

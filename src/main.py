@@ -13,10 +13,8 @@ from traffic_scanner.yandex_maps_client import YandexMapsClient
 
 
 def error_callback(update, context):
-    if update is not None:
-        update.message.reply_text(str(context.error))
-        update.message.reply_text(traceback.format_exc())
-
+    update.effective_message.reply_text(str(context.error))
+    update.effective_message.reply_text(traceback.format_exc())
     raise context.error
 
 
@@ -39,6 +37,6 @@ bc.initialize_dispatcher(dp)
 dp.add_error_handler(error_callback)
 
 if __name__ == '__main__':
-    dp.run_async(bc.traffic_scanner.serve_restart)
+    # dp.run_async(bc.traffic_scanner.serve_restart)
     updater.start_polling()
     updater.idle()

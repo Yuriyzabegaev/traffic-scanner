@@ -53,6 +53,10 @@ class TrafficStorage(ABC):
         pass
 
     @abstractmethod
+    def get_route(self, user_id, route_title, s) -> Route:
+        pass
+
+    @abstractmethod
     def get_routes(self, user_id, s) -> [Route]:
         pass
 
@@ -74,4 +78,8 @@ class TrafficStorage(ABC):
 
     @abstractmethod
     def update_user(self, user: User, s) -> None:
+        pass
+
+    @abstractmethod
+    def rename_route(self, user_id, old_name: str, new_name: str, s) -> None:
         pass

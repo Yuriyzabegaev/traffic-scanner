@@ -67,6 +67,10 @@ class TrafficStorageSQL(TrafficStorage):
         finally:
             session.close()
 
+    def get_route(self, user_id, route_title, s) -> Route:
+        route_query = s.query(Route).filter_by(user_id=user_id, title=route_title)
+        return route_query.first()
+
     def get_routes(self, user_id, s) -> [Route]:
         routes_query = s.query(Route)
         if user_id is None:
@@ -101,3 +105,7 @@ class TrafficStorageSQL(TrafficStorage):
 
     def update_user(self, user: User, s) -> None:
         s.merge(user)
+
+    def rename_route(self, user_id, old_name: str, new_name: str, s) -> None:
+        route = self.get_route(user_id=user_id, route_title=old_name, s=s)
+        route.title = new_name

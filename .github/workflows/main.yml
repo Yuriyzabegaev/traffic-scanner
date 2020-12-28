@@ -19,41 +19,41 @@ env:
 
 
 jobs:
-#  test:
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Checkout main
-#        uses: actions/checkout@v2
-#
-#      - name: Set up Python 3.8
-#        uses: actions/setup-python@v2
-#        with:
-#          python-version: 3.8
-#
-#      - name: Install dependencies with pip
-#        run: pip install -r requirements.txt
-#
-#      - name: Test with unittest
-#        run: python -m unittest discover src
-#
-#  build_and_push:
-#    runs-on: ubuntu-latest
-#    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-#    needs: test
-#
-#    steps:
-#      - name: Checkout main
-#        uses: actions/checkout@v2
-#
-#      - name: Build container image
-#        run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
-#
-#      - name: Logging in DockerHub
-#        run: docker login --username=$(echo $DOCKERHUB_NAME) --password=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-#
-#      - name: Push image to DockerHub
-#        run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies with pip
+        run: pip install -r requirements.txt
+
+      - name: Test with unittest
+        run: python -m unittest discover src
+
+  build_and_push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: test
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Build container image
+        run: docker build -t $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
+
+      - name: Logging in DockerHub
+        run: docker login --username=$(echo $DOCKERHUB_NAME) --password=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: Push image to DockerHub
+        run: docker push $(echo $DOCKERHUB_NAME)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
 
   deploy:
     env:
@@ -61,7 +61,7 @@ jobs:
       USERNAME: ${{ secrets.USERNAME }}
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-#    needs: build_and_push
+    needs: build_and_push
 
     steps:
       - uses: actions/checkout@v2

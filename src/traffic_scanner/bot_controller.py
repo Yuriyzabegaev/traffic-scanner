@@ -183,7 +183,7 @@ Commands:
             user_id = update.effective_message.from_user.id
             reports = (self.traffic_scanner.storage.make_report(r, s)
                        for r in self.traffic_scanner.storage.get_routes(user_id, s))
-            figures = [self.traffic_plotter.plot_traffic(r.timestamps, r.durations, r.timezone, r.route.title)
+            figures = [self.traffic_plotter.plot_traffic_by_day(r.timestamps, r.durations, r.timezone, r.route.title)
                        for r in reports
                        if len(r.timestamps) > 0]
             if len(figures) == 0:
@@ -236,7 +236,7 @@ Commands:
                 return
 
             report = self.traffic_scanner.storage.make_report(route, s)
-            figure = self.traffic_plotter.plot_traffic(report.timestamps, report.durations,
+            figure = self.traffic_plotter.plot_traffic_minmax(report.timestamps, report.durations,
                                                        report.timezone, report.route.title)
             with io.BytesIO() as buf:
                 figure.savefig(buf, format='png')

@@ -30,7 +30,7 @@ class TrafficView:
         self.num_time_intervals = math.ceil(DAY / period)
         self.timedelta = period
 
-    def plot_traffic(self, timestamps, durations, timezone, route_name):
+    def plot_traffic_by_day(self, timestamps, durations, timezone, route_name):
         durations, nonzero_intervals = sort_days_intervals(np.array(timestamps) + timezone * HOUR,
                                                            durations,
                                                            self.timedelta)
@@ -55,6 +55,66 @@ class TrafficView:
         ax.set_title(route_name)
         fig.legend()
         return fig
+
+    def plot_traffic_minmax(self, timestamps, durations, timezone, route_name):
+        durations, nonzero_intervals = sort_intervals(np.array(timestamps) + timezone * HOUR,
+                                                           durations,
+                                                           self.timedelta)
+        durations = np.concatenate(np.array(durations, dtype=object))
+        nonzero_intervals = np.concatenate(np.array(nonzero_intervals, dtype=object)) * self.timedelta
+        fig = plt.figure()
+        ax = fig.gca()
+        if len(nonzero_intervals) != 0:
+
+            durations_mean = tuple(map(int, map(np.mean, durations)))
+            durations_max = tuple(map(int, map(np.max, durations)))
+            durations_min = tuple(map(int, map(np.min, durations)))
+
+            some_days = (np.max(durations_max) > DAY)
+            if not some_days:
+                ax.yaxis.set_major_formatter(md.DateFormatter('%H:%M'))
+            else:
+                ax.set_ylabel('Hours')
+
+            y_max = prettify_y(durations_max, some_days)
+            y_min = prettify_y(durations_min, some_days)
+            y_mean = prettify_y(durations_mean, some_days)
+
+            x_labels = tuple(map(datetime.datetime.utcfromtimestamp, nonzero_intervals))
+            ax.xaxis.set_major_formatter(md.DateFormatter('%H:%M'))
+            ax.plot(x_labels, y_max, linewidth=3, alpha=0.9, label='max')
+            ax.plot(x_labels, y_mean, linewidth=4, alpha=0.9, label='mean')
+            ax.plot(x_labels, y_min, linewidth=3, alpha=0.9, label='min')
+
+        ax.set_title(route_name)
+        fig.legend()
+        return fig
+
+
+def prettify_y(durations, some_days):
+    if not some_days:
+        return tuple(map(datetime.datetime.utcfromtimestamp, durations))
+    else:
+        return [ts / HOUR for ts in durations]
+
+
+def sort_intervals(timestamps, durations, timedelta):
+    dates = np.array(list(map(datetime.datetime.fromtimestamp, timestamps)))
+    durations = np.array(durations)
+    durations_days_intervals = []
+    nonzero_intervals = []
+
+    dates_intervals_indices = argsort_time(dates, timedelta)
+    nonzero_intervals.append([i for i in range(len(dates_intervals_indices))
+                              if len(dates_intervals_indices[i]) > 0])
+
+    durations_days_intervals.append([durations[dates_intervals_idx]
+                                     for dates_intervals_idx in dates_intervals_indices
+                                     if len(durations[dates_intervals_idx]) > 0])
+    return (
+        durations_days_intervals,
+        nonzero_intervals
+    )
 
 
 def sort_days_intervals(timestamps, durations, timedelta):

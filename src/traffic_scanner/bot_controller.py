@@ -70,6 +70,7 @@ How it works?
 To begin, send me a link from yandex maps of the route start
 
 Commands:
+/add_route
 /routes
 ''')
     PROPOSAL_ENTER_START = 'Enter start point coordinates or url 🤓'
@@ -135,6 +136,7 @@ Commands:
         dispatcher.add_handler(CommandHandler('report', self.build_report))
         dispatcher.add_handler(CommandHandler('list', self.list_routes))
         dispatcher.add_handler(CommandHandler('routes', self.show_routes))
+        dispatcher.add_handler(CommandHandler('add_route', self.add_route))
         dispatcher.add_handler(CallbackQueryHandler(self.choose_route, pattern=self.CALLBACK_SHOW_ROUTES))
         dispatcher.add_handler(CallbackQueryHandler(self.choose_edit, pattern=self.CALLBACK_EDIT_ROUTE))
         dispatcher.add_handler(CallbackQueryHandler(self.choose_delete_route, pattern=self.CALLBACK_DELETE_ROUTE))
@@ -148,6 +150,11 @@ Commands:
     @staticmethod
     def start(update, context):
         update.effective_message.reply_text(BotController.RESPONSE_ON_START)
+
+    @staticmethod
+    def add_route(update, context):
+        update.effective_message.reply_text('Ok, send point A link or coordinates from yandex maps.\n'
+                                            'By the way, you may not use this command, just send it anytime 🤪')
 
     @cancelable
     def enter_start(self, update, context):

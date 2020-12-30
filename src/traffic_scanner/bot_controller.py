@@ -243,9 +243,10 @@ Commands:
             route = self.traffic_scanner.storage.get_route(user_id=user_id,
                                                            route_id=route_id,
                                                            s=s)
-            query.edit_message_text(text=route.title)
             if route is None:
+                query.edit_message_text(text='Route not found')
                 return
+            query.edit_message_text(text=route.title)
 
             report = self.traffic_scanner.storage.make_report(route, s)
             figure = self.traffic_plotter.plot_traffic_minmax(report.timestamps, report.durations,
@@ -348,10 +349,11 @@ Commands:
             forward_route = self.traffic_scanner.storage.get_route(user_id=user_id,
                                                                    route_id=forward_route_name,
                                                                    s=s)
-            self.traffic_scanner.add_route(start_coords=forward_route.end_coords,
-                                           end_coords=forward_route.start_coords,
-                                           user_idx=user_id,
-                                           s=s,
-                                           title=new_route_name)
+            if forward_route is not None:
+                self.traffic_scanner.add_route(start_coords=forward_route.end_coords,
+                                               end_coords=forward_route.start_coords,
+                                               user_idx=user_id,
+                                               s=s,
+                                               title=new_route_name)
         update.effective_message.reply_text(self.RESPONSE_ON_SUCCESS)
         return ConversationHandler.END

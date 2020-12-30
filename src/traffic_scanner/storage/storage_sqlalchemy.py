@@ -96,7 +96,8 @@ class TrafficStorageSQL(TrafficStorage):
 
     def remove_route(self, user_id, route_id, s) -> None:
         route = self.get_route(user_id=user_id, route_id=route_id, s=s)
-        s.delete(route)
+        if route is not None:
+            s.delete(route)
 
     def make_report(self, route, s) -> RouteTrafficReport:
         traffic_report = s.query(Traffic).filter_by(route=route)
@@ -110,4 +111,5 @@ class TrafficStorageSQL(TrafficStorage):
 
     def rename_route(self, user_id, route_id: str, new_name: str, s) -> None:
         route = self.get_route(user_id=user_id, route_id=route_id, s=s)
-        route.title = new_name
+        if route is not None:
+            route.title = new_name

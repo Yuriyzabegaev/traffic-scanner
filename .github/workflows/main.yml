@@ -83,11 +83,10 @@ jobs:
           KEY: ${{ secrets.SSHKEY }}
           envs: IMAGE_NAME, USERNAME, TELEGRAM_BOT_TOKEN
           script: |
-            export VOLUME_HOST_PATH="${USERNAME}/data"
+            export VOLUME_HOST_PATH="/${USERNAME}/data"
             export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
 
             docker-compose down
-
             docker-compose pull
-
+            docker image prune
             docker-compose up

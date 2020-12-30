@@ -59,20 +59,32 @@ def parse_coordinates_or_url(input_str):
 class BotController:
     ENTER_START, ENTER_FINISH, ENTER_TITLE = range(3)
 
-    RESPONSE_ON_START = ('''Hello!
+    RESPONSE_ON_START = ('''Hello! 🙋‍♂️
+
+I can help you to organize your automobile journey without traffic jams! 😏
+
+How it works?
+* You tell me points A and B of your trip 📲
+* I scan yandex maps and build you a chart of how long will your route take versus time of day 🚗
+
+To begin, send me a link from yandex maps of the route start
 
 Commands:
 /routes
 ''')
-    PROPOSAL_ENTER_START = 'Enter start point coordinates or url'
-    PROPOSAL_COORDINATES_INSTEAD_OF_URL = 'Could you send coordinates please?'
-    PROPOSAL_ENTER_LOCATION_TITLE = 'Now please enter name for this route'
-    RESPONSE_ON_CANCEL = 'Ok'
-    RESPONSE_ON_SUCCESS = 'Ok'
-    RESPONSE_ON_FAILURE = 'Not ok :('
-    RESPONSE_NO_ROUTES = 'No routes :('
+    PROPOSAL_ENTER_START = 'Enter start point coordinates or url 🤓'
+    PROPOSAL_ENTER_FINISH = 'Now enter finish coordinates 🧐'
+    PROPOSAL_COORDINATES_INSTEAD_OF_URL = 'Could you send coordinates please? 🤐'
+    PROPOSAL_ENTER_LOCATION_TITLE = 'Now please enter name for this route 🤤'
+    RESPONSE_ON_CANCEL = '🆗'
+    RESPONSE_ON_SUCCESS = '🆗'
+    RESPONSE_ON_FAILURE = 'Not ok 😔'
+    RESPONSE_NO_ROUTES = 'No routes 🙌'
+
+    BUTTON_EDIT = 'Edit 🛠'
+
     FAILURE_PARSING_COORDINATES = '''Could not understand your coordinates
- Retry?
+ Retry? 🤔
  Please, send coordinates or link from Yandex maps
  '''
 
@@ -149,7 +161,7 @@ Commands:
             return BotController.ENTER_START
 
         context.chat_data['start_location'] = l0, l1
-        update.effective_message.reply_text('Now enter finish coordinates')
+        update.effective_message.reply_text(self.PROPOSAL_ENTER_FINISH)
         return self.ENTER_FINISH
 
     @cancelable
@@ -208,10 +220,10 @@ Commands:
         proposal_select_route = 'Select route?'
         with self.traffic_scanner.storage.session_scope() as s:
             user_id = update.effective_message.from_user.id
-            routes = [route.title for route in self.traffic_scanner.storage.get_routes(user_id, s)]
+            routes = [route for route in self.traffic_scanner.storage.get_routes(user_id, s)]
             if len(routes) > 0:
                 keyboard = [[InlineKeyboardButton(
-                    route, callback_data='{}{}'.format(self.CALLBACK_SHOW_ROUTES, route)
+                    route.title, callback_data='{}{}'.format(self.CALLBACK_SHOW_ROUTES, route.route_id)
                 )] for route in routes]
                 update.effective_message.reply_text(proposal_select_route, reply_markup=InlineKeyboardMarkup(keyboard))
             else:
@@ -223,15 +235,15 @@ Commands:
         query = update.callback_query
         query.answer()
 
-        effective_data = query.data.removeprefix(self.CALLBACK_SHOW_ROUTES)
-        query.edit_message_text(text=effective_data)
+        route_id = query.data.removeprefix(self.CALLBACK_SHOW_ROUTES)
         user_id = update.effective_user.id
         update.effective_user.send_chat_action('upload_photo')
 
         with self.traffic_scanner.storage.session_scope() as s:
             route = self.traffic_scanner.storage.get_route(user_id=user_id,
-                                                           route_title=effective_data,
+                                                           route_id=route_id,
                                                            s=s)
+            query.edit_message_text(text=route.title)
             if route is None:
                 return
 
@@ -244,7 +256,7 @@ Commands:
                 plot_file = InputFile(buf)
 
             keyboard = [[InlineKeyboardButton(
-                'Edit', callback_data='{}{}'.format(self.CALLBACK_EDIT_ROUTE, effective_data))]]
+                self.BUTTON_EDIT, callback_data='{}{}'.format(self.CALLBACK_EDIT_ROUTE, route_id))]]
             update.effective_message.reply_photo(plot_file, reply_markup=InlineKeyboardMarkup(keyboard))
             plt.close(figure)
 
@@ -257,14 +269,14 @@ Commands:
         query = update.callback_query
         query.answer()
 
-        route_name = query.data.removeprefix(self.CALLBACK_EDIT_ROUTE)
+        route_id = query.data.removeprefix(self.CALLBACK_EDIT_ROUTE)
 
         keyboard = [
-            [InlineKeyboardButton('Rename', callback_data='{}{}'.format(self.CALLBACK_RENAME_ROUTE, route_name)),
-             InlineKeyboardButton('Delete', callback_data='{}{}'.format(self.CALLBACK_DELETE_ROUTE, route_name))],
-            [InlineKeyboardButton('Add road back', callback_data='{}{}'
-                                  .format(self.CALLBACK_ADD_ROAD_BACK, route_name)),
-             InlineKeyboardButton('Ok', callback_data=self.CALLBACK_CLOSE_EDIT)]
+            [InlineKeyboardButton('Rename 🗣', callback_data='{}{}'.format(self.CALLBACK_RENAME_ROUTE, route_id)),
+             InlineKeyboardButton('Delete ❌', callback_data='{}{}'.format(self.CALLBACK_DELETE_ROUTE, route_id))],
+            [InlineKeyboardButton('Add road back ♻️', callback_data='{}{}'
+                                  .format(self.CALLBACK_ADD_ROAD_BACK, route_id)),
+             InlineKeyboardButton('🆗', callback_data=self.CALLBACK_CLOSE_EDIT)]
         ]
         query.edit_message_reply_markup(InlineKeyboardMarkup(keyboard))
 
@@ -272,8 +284,8 @@ Commands:
         query = update.callback_query
         query.answer()
 
-        route_name = query.data.removeprefix(self.CALLBACK_RENAME_ROUTE)
-        context.chat_data['old_route_name'] = route_name
+        route_id = query.data.removeprefix(self.CALLBACK_RENAME_ROUTE)
+        context.chat_data['old_route_id'] = route_id
 
         update.effective_message.reply_text(BotController.PROPOSAL_ENTER_LOCATION_TITLE)
         return self.ENTER_TITLE
@@ -282,14 +294,14 @@ Commands:
     def do_rename_route(self, update, context):
         new_name = update.effective_message.text
         try:
-            old_name = context.chat_data['old_route_name']
+            route_id = context.chat_data['old_route_id']
         except KeyError:
             update.effective_message.reply_text(self.RESPONSE_ON_FAILURE)
             return ConversationHandler.END
-        del context.chat_data['old_route_name']
+        del context.chat_data['old_route_id']
         with self.traffic_scanner.storage.session_scope() as s:
             self.traffic_scanner.storage.rename_route(user_id=update.effective_message.from_user.id,
-                                                      old_name=old_name,
+                                                      route_id=route_id,
                                                       new_name=new_name,
                                                       s=s)
         update.effective_message.reply_text(self.RESPONSE_ON_SUCCESS)
@@ -299,25 +311,25 @@ Commands:
         query = update.callback_query
         query.answer()
 
-        route_name = query.data.removeprefix(self.CALLBACK_DELETE_ROUTE)
+        route_id = query.data.removeprefix(self.CALLBACK_DELETE_ROUTE)
 
         with self.traffic_scanner.storage.session_scope() as s:
-            self.traffic_scanner.storage.remove_route(update.effective_user.id, route_name=route_name, s=s)
+            self.traffic_scanner.storage.remove_route(update.effective_user.id, route_id=route_id, s=s)
         query.edit_message_reply_markup(None)
         update.effective_message.reply_text(self.RESPONSE_ON_SUCCESS)
 
     def choose_close_edit(self, update, context):
         query = update.callback_query
         query.answer()
-        keyboard = [[InlineKeyboardButton('Edit', callback_data=self.CALLBACK_EDIT_ROUTE)]]
+        keyboard = [[InlineKeyboardButton(self.BUTTON_EDIT, callback_data=self.CALLBACK_EDIT_ROUTE)]]
         query.edit_message_reply_markup(InlineKeyboardMarkup(keyboard))
 
     def choose_add_road_back(self, update, context):
         query = update.callback_query
         query.answer()
 
-        route_name = query.data.removeprefix(self.CALLBACK_ADD_ROAD_BACK)
-        context.chat_data['forward_route_name'] = route_name
+        route_id = query.data.removeprefix(self.CALLBACK_ADD_ROAD_BACK)
+        context.chat_data['forward_route_id'] = route_id
 
         update.effective_message.reply_text(BotController.PROPOSAL_ENTER_LOCATION_TITLE)
         return self.ENTER_TITLE
@@ -326,15 +338,15 @@ Commands:
     def do_add_road_back(self, update, context):
         new_route_name = update.effective_message.text
         try:
-            forward_route_name = context.chat_data['forward_route_name']
+            forward_route_name = context.chat_data['forward_route_id']
         except KeyError:
             update.effective_message.reply_text(self.RESPONSE_ON_FAILURE)
             return ConversationHandler.END
-
+        del context.chat_data['forward_route_id']
         user_id = update.effective_user.id
         with self.traffic_scanner.storage.session_scope() as s:
             forward_route = self.traffic_scanner.storage.get_route(user_id=user_id,
-                                                                   route_title=forward_route_name,
+                                                                   route_id=forward_route_name,
                                                                    s=s)
             self.traffic_scanner.add_route(start_coords=forward_route.end_coords,
                                            end_coords=forward_route.start_coords,

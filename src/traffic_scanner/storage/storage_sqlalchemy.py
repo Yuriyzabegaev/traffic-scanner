@@ -68,8 +68,8 @@ class TrafficStorageSQL(TrafficStorage):
         finally:
             session.close()
 
-    def get_route(self, user_id, route_title, s) -> Route:
-        route_query = s.query(Route).filter_by(user_id=user_id, title=route_title)
+    def get_route(self, user_id, route_id, s) -> Route:
+        route_query = s.query(Route).filter_by(user_id=user_id, route_id=route_id)
         return route_query.first()
 
     def get_routes(self, user_id, s) -> [Route]:
@@ -94,8 +94,8 @@ class TrafficStorageSQL(TrafficStorage):
         s.add(route)
         return route
 
-    def remove_route(self, user_id, route_name, s) -> None:
-        route = self.get_route(user_id=user_id, route_title=route_name, s=s)
+    def remove_route(self, user_id, route_id, s) -> None:
+        route = self.get_route(user_id=user_id, route_id=route_id, s=s)
         s.delete(route)
 
     def make_report(self, route, s) -> RouteTrafficReport:
@@ -108,6 +108,6 @@ class TrafficStorageSQL(TrafficStorage):
     def update_user(self, user: User, s) -> None:
         s.merge(user)
 
-    def rename_route(self, user_id, old_name: str, new_name: str, s) -> None:
-        route = self.get_route(user_id=user_id, route_title=old_name, s=s)
+    def rename_route(self, user_id, route_id: str, new_name: str, s) -> None:
+        route = self.get_route(user_id=user_id, route_id=route_id, s=s)
         route.title = new_name

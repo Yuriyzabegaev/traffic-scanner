@@ -43,7 +43,7 @@ class RouteTrafficReport:
 
     @property
     def timezone(self) -> int:
-        return self.route.user.timezone or os.environ['TIMEZONE']
+        return int(self.route.user.timezone or os.environ['TIMEZONE'])
 
 
 class TrafficStorage(ABC):

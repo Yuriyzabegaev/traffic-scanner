@@ -83,3 +83,7 @@ class TrafficStorage(ABC):
     @abstractmethod
     def rename_route(self, user_id, route_id: str, new_name: str, s) -> None:
         pass
+
+    @abstractmethod
+    def delete_old_traffic_entries(self, s, route: Route, keep_days: int) -> None:
+        pass

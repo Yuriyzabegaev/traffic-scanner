@@ -27,12 +27,13 @@ class TrafficScanner:
         routes = self.storage.get_routes(user_id=None, s=s)
         for route in routes:
             self.scan_route(route, s)
+            self.storage.delete_old_traffic_entries(s=s, route=route, keep_days=14)
 
     def scan_route(self, route, s):
         traffic_json = self.yandex_maps_client.build_route(route.start_coords, route.end_coords)
         try:
             routes = traffic_json['data']['routes']
-            if len(routes) > 0:  # TODO: Is [0] the quickest?
+            if len(routes) > 0:  # Is [0] the quickest?
                 duration_sec = routes[0]['durationInTraffic']
             else:
                 logger.error(f'On route {route.idx} 0 available ways were found.')

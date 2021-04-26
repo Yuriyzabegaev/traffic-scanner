@@ -1,6 +1,7 @@
 import time
 import logging
 from contextlib import contextmanager
+from datetime import datetime
 
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Float
 from sqlalchemy import create_engine
@@ -12,6 +13,8 @@ from traffic_scanner.storage import User, Route, RouteTrafficReport, TrafficStor
 logger = logging.getLogger('traffic_scanner/storage/storage_sqlalchemy.py')
 
 MAX_SYMBOLS_IN_STRING = 50
+
+DAY = 24 * 60 * 60
 
 metadata = MetaData()
 
@@ -113,3 +116,15 @@ class TrafficStorageSQL(TrafficStorage):
         route = self.get_route(user_id=user_id, route_id=route_id, s=s)
         if route is not None:
             route.title = new_name
+
+    def delete_old_traffic_entries(self, s, route: Route, keep_days: int) -> None:
+        traffic_to_delete = s.query(Traffic).filter(Traffic.route == route, Traffic.timestamp == keep_days * DAY)
+        traffic_to_delete.delete()
+
+    def make_report_day(self, route: Route, s, day_id: int) -> RouteTrafficReport:
+        traffic_report = s.query(Traffic).filter_by(route=route)
+        traffic_entities: [Traffic] = traffic_report.all()
+        traffic_entities = [traffic for traffic in traffic_entities if datetime.fromtimestamp(traffic.timestamp).weekday() == day_id]
+        return RouteTrafficReport(route=route,
+                                  timestamps=tuple(map(lambda x: x.timestamp, traffic_entities)),
+                                  durations=tuple(map(lambda x: x.duration_sec, traffic_entities)))

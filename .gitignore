@@ -1,3 +1,6 @@
 venv
 *.csv
 *.tar
+__pycache__
+.vscode
+*.sqlite

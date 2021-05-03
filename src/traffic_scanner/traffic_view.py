@@ -7,10 +7,7 @@ from matplotlib import pyplot as plt, dates as md
 
 plt.rcParams.update(plt.rcParamsDefault)
 plt.style.use([
-    'dark_background',
-    # 'seaborn-pastel',
-    # 'seaborn-darkgrid',
-    # 'seaborn'
+    'dark_background'
 ])
 plt.rcParams.update({'figure.figsize': [12, 4]})
 

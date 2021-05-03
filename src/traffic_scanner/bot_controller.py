@@ -231,38 +231,42 @@ Commands:
             [InlineKeyboardButton(self.BUTTON_SHOW_BY_DAY, callback_data=self.CALLBACK_SHOW_BY_DAY + str(route_id))],
         ]
 
+    def _send_route_plot(self, update, route_id):
+        user_id = update.effective_user.id
+        query = update.callback_query
+        if len(update.effective_message.photo) == 0:
+            update.effective_user.send_chat_action('upload_photo')
+        with self.traffic_scanner.storage.session_scope() as s:
+            route = self.traffic_scanner.storage.get_route(user_id=user_id,
+                                                        route_id=route_id,
+                                                        s=s)
+            if route is None:
+                return
+
+            report = self.traffic_scanner.storage.make_report(route, s)
+            figure = self.traffic_plotter.plot_traffic_minmax(report.timestamps, report.durations,
+                                                    report.timezone, report.route.title)
+            with io.BytesIO() as buf:
+                figure.savefig(buf, format='png')
+                buf.seek(0)
+                keyboard = self._get_route_inline_markup(route_id)
+                if len(update.effective_message.photo) == 0:
+                    
+                    plot_file = InputFile(buf)
+                    update.effective_message.reply_photo(plot_file, reply_markup=InlineKeyboardMarkup(keyboard))
+                else:
+                    plot_file = InputMediaPhoto(buf)
+                    query.edit_message_media(plot_file)
+                    query.edit_message_reply_markup(InlineKeyboardMarkup(keyboard))
+
+            plt.close(figure)
+
     def choose_route(self, update, context):
         query = update.callback_query
         query.answer()
 
         route_id = query.data[len(self.CALLBACK_SHOW_ROUTES):]
-        user_id = update.effective_user.id
-        update.effective_user.send_chat_action('upload_photo')
-
-        with self.traffic_scanner.storage.session_scope() as s:
-            route = self.traffic_scanner.storage.get_route(user_id=user_id,
-                                                           route_id=route_id,
-                                                           s=s)
-            if route is None:
-                query.edit_message_text(text='Route not found')
-                return
-            query.edit_message_text(text=route.title)
-
-            report = self.traffic_scanner.storage.make_report(route, s)
-            figure = self.traffic_plotter.plot_traffic_minmax(report.timestamps, report.durations,
-                                                       report.timezone, report.route.title)
-            with io.BytesIO() as buf:
-                figure.savefig(buf, format='png')
-                buf.seek(0)
-
-                if len(update.effective_message.photo) == 0:
-                    plot_file = InputFile(buf)
-                    keyboard = self._get_route_inline_markup(route_id)
-                    update.effective_message.reply_photo(plot_file, reply_markup=InlineKeyboardMarkup(keyboard))
-                else:
-                    plot_file = InputMediaPhoto(buf)
-                    query.edit_message_media(plot_file)
-            plt.close(figure)
+        self._send_route_plot(update, route_id)
 
     CALLBACK_RENAME_ROUTE = '__rename_route__'
     CALLBACK_DELETE_ROUTE = '__delete_route__'
@@ -325,8 +329,8 @@ Commands:
     def choose_close_edit(self, update, context):
         query = update.callback_query
         query.answer()
-        keyboard = self._get_route_inline_markup(route_id=None)
-        query.edit_message_reply_markup(InlineKeyboardMarkup(keyboard))
+        route_id = query.data[len(self.CALLBACK_CLOSE_EDIT):]
+        self._send_route_plot(update, route_id)
 
     def choose_add_road_back(self, update, context):
         query = update.callback_query
@@ -362,10 +366,10 @@ Commands:
         return ConversationHandler.END
 
     CALLBACK_SELECT_DAY = '__select_day__'
-    DAYS = dict(enumerate(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']))
+    DAYS = dict(enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
 
     def _get_show_by_day_inline_markup(self, route_id):
-        keyboard = [[InlineKeyboardButton(day, callback_data='{}{}__{}'.format(self.CALLBACK_SELECT_DAY, route_id, day_id))] for (day_id, day) in self.DAYS.items()]
+        keyboard = [[InlineKeyboardButton(day, callback_data='{}{}__{}'.format(self.CALLBACK_SELECT_DAY, route_id, day_id)) for (day_id, day) in self.DAYS.items()]]
         keyboard.append([InlineKeyboardButton('Back', callback_data='{}{}'.format(self.CALLBACK_CLOSE_EDIT, route_id))])
         return keyboard
 
@@ -384,7 +388,6 @@ Commands:
         day_id = int(query.data[-1])
         
         user_id = update.effective_user.id
-        update.effective_user.send_chat_action('upload_photo')
 
         with self.traffic_scanner.storage.session_scope() as s:
             route = self.traffic_scanner.storage.get_route(user_id=user_id,

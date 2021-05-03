@@ -1,7 +1,7 @@
 import logging
 import time
 
-from traffic_scanner.storage import TrafficStorage, Route, User
+from traffic_scanner.storage import TrafficStorageSQL, Route, User
 from traffic_scanner.yandex_maps_client import YandexMapsClient
 
 
@@ -13,9 +13,9 @@ HOUR = 60 * 60
 
 class TrafficScanner:
 
-    def __init__(self, period, yandex_maps_client: YandexMapsClient, storage: TrafficStorage):
+    def __init__(self, period, yandex_maps_client: YandexMapsClient, storage: TrafficStorageSQL):
         self.period: int = period
-        self.storage: TrafficStorage = storage
+        self.storage: TrafficStorageSQL = storage
         self.yandex_maps_client: YandexMapsClient = yandex_maps_client
 
     def add_route(self, start_coords, end_coords, user_idx, s, title=None):

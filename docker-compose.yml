@@ -2,11 +2,11 @@ version: "3.9"
 services:
   traffic-scanner:
     restart: always
-    image: yuriyzabegaev/traffic-scanner:latest
+    build: .
     container_name: traffic-scanner
     volumes:
       - ${VOLUME_HOST_PATH}:/data:rw
     environment:
       - TIMEZONE=3
-      - DATABASE_URL=sqlite:///data/db_test
+      - DATABASE_URL=sqlite:///data/db.sqlite
       - TELEGRAM_BOT_TOKEN

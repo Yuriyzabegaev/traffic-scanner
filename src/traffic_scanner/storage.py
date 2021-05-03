@@ -1,3 +1,7 @@
+import os
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Tuple, Optional
 import time
 import logging
 from contextlib import contextmanager
@@ -7,10 +11,50 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Flo
 from sqlalchemy import create_engine
 from sqlalchemy.orm import mapper, relationship, sessionmaker, backref
 
-from traffic_scanner.storage import User, Route, RouteTrafficReport, TrafficStorage, Traffic
+
+@dataclass
+class User:
+    user_id: int
+    timezone: Optional[int] = field(default=None)
 
 
-logger = logging.getLogger('traffic_scanner/storage/storage_sqlalchemy.py')
+@dataclass
+class Route:
+    start_l0: float
+    start_l1: float
+    end_l0: float
+    end_l1: float
+    title: str
+    user: User
+
+    @property
+    def start_coords(self) -> (float, float):
+        return self.start_l0, self.start_l1
+
+    @property
+    def end_coords(self) -> (float, float):
+        return self.end_l0, self.end_l1
+
+
+@dataclass
+class Traffic:
+    route: Route
+    timestamp: int
+    duration_sec: int
+
+
+@dataclass
+class RouteTrafficReport:
+    route: Route
+    timestamps: Tuple
+    durations: Tuple
+
+    @property
+    def timezone(self) -> int:
+        return int(self.route.user.timezone or os.environ.get('TIMEZONE', 0))
+
+
+logger = logging.getLogger('traffic_scanner/storage.py')
 
 MAX_SYMBOLS_IN_STRING = 50
 
@@ -51,7 +95,7 @@ mapper(Traffic, traffic_table,
 Session = sessionmaker()
 
 
-class TrafficStorageSQL(TrafficStorage):
+class TrafficStorageSQL:
 
     def __init__(self, db_url):
         logger.info(f'Using database path: {db_url}')
@@ -87,7 +131,7 @@ class TrafficStorageSQL(TrafficStorage):
     def add_route(self, start_coords, end_coords, title, user_id, s) -> Route:
         user = s.query(User).filter_by(user_id=user_id).first()
         if user is None:
-            user = User(user_id=user_id, timezone=None)
+            user = User(user_id=user_id, timezone=os.environ.get('TIMEZONE', 0))
         route = Route(start_l0=start_coords[0],
                       start_l1=start_coords[1],
                       end_l0=end_coords[0],
@@ -109,9 +153,6 @@ class TrafficStorageSQL(TrafficStorage):
                                   timestamps=tuple(map(lambda x: x.timestamp, traffic_entities)),
                                   durations=tuple(map(lambda x: x.duration_sec, traffic_entities)))
 
-    def update_user(self, user: User, s) -> None:
-        s.merge(user)
-
     def rename_route(self, user_id, route_id: str, new_name: str, s) -> None:
         route = self.get_route(user_id=user_id, route_id=route_id, s=s)
         if route is not None:
@@ -124,7 +165,7 @@ class TrafficStorageSQL(TrafficStorage):
     def make_report_day(self, route: Route, s, day_id: int) -> RouteTrafficReport:
         traffic_report = s.query(Traffic).filter_by(route=route)
         traffic_entities: [Traffic] = traffic_report.all()
-        traffic_entities = [traffic for traffic in traffic_entities if datetime.fromtimestamp(traffic.timestamp).weekday() == day_id]
+        traffic_entities = [traffic for traffic in traffic_entities if datetime.fromtimestamp(traffic.timestamp + route.user.timezone).weekday() == day_id]
         return RouteTrafficReport(route=route,
                                   timestamps=tuple(map(lambda x: x.timestamp, traffic_entities)),
                                   durations=tuple(map(lambda x: x.duration_sec, traffic_entities)))

@@ -6,7 +6,7 @@ import numpy
 from telegram.ext import Updater
 
 from traffic_scanner.bot_controller import BotController
-from traffic_scanner.storage.storage_sqlalchemy import TrafficStorageSQL
+from traffic_scanner.storage import TrafficStorageSQL
 from traffic_scanner.traffic_scanner import TrafficScanner
 from traffic_scanner.traffic_view import TrafficView
 from traffic_scanner.yandex_maps_client import YandexMapsClient
